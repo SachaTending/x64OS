@@ -8,5 +8,5 @@ TODO List:
  - [x] GDT
  - [x] IDT
  - [x] PMM
- - [ ] VMM
+ - [x] VMM
  - [ ] and more
