@@ -2,6 +2,7 @@
 #include <idt.hpp>
 #include <stddef.h>
 #include <libc.h>
+#include <sched.hpp>
 
 extern size_t global_ticks;
 
@@ -36,6 +37,7 @@ void pit_set_frequency(uint64_t frequency) {
 void pit_int(idt_regs *regs) {
     (void)regs;
     global_ticks++;
+    sched_handl(regs);
 }
 
 void init_pit() {

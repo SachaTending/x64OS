@@ -5,6 +5,7 @@
 #include <logging.hpp>
 #include <cpu.h>
 #include <ioapic.hpp>
+#include <sched.hpp>
 
 static Logger log("Kernel");
 
@@ -168,6 +169,20 @@ size_t global_ticks;
 void lapic_timer_oneshot(uint64_t us, uint8_t vector);
 void init_pic();
 
+void krnl_task() {
+    log.info("multitaskin'\n");
+    task_t *t = root_task;
+    do {
+        log.info("Task: %s PID: %u\n", t->name, t->pid);
+        t = t->next;
+    } while (t != root_task);
+    for(;;) asm volatile ("hlt");
+}
+
+void krnl2_task() {
+    for(;;);
+}
+
 void Kernel::Main() {
     if (krnl_called) return;
     krnl_called = true;
@@ -183,9 +198,10 @@ void Kernel::Main() {
     init_pit();
     init_pic();
     //asm volatile ("int $32");
-    log.info("well, init's entry ended succesfully, so kernel can start drivers, scheduler and other stuff, but no, its not implemented lol\n");
-    log.info("Going to loop.\n");
-    //funny();
-    //ASSERT(0);
+    log.info("Starting scheduler...\n");
+    sched_init();
+    create_task(krnl_task, "x64oskrnl.elf MICROSOFT GO FUCK YOURSELF");
+    create_task(krnl2_task, "sailor moon webtv");
+    start_sched();
     for(;;);
 }
