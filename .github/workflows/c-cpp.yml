@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - uses: ilammy/setup-nasm
+    - uses: ilammy/setup-nasm@v1
     - name: make
       run: make
     - name: Upload a Build Artifact
