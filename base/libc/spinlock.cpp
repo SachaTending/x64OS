@@ -19,7 +19,7 @@ extern "C" {
         return;
 
     deadlock:
-        printf("spinlock: Deadlock occurred at %llx on lock %llx whose last acquirer was %llx", __builtin_return_address(0), lock, lock->last_acquirer);
+        PANIC("spinlock: Deadlock occurred at 0x%lx on lock 0x%lx whose last acquirer was 0x%lx", __builtin_return_address(0), lock, lock->last_acquirer);
     }
 
     __attribute__((noinline)) void spinlock_acquire_no_dead_check(spinlock_t *lock) {

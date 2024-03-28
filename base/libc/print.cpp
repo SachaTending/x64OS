@@ -1,6 +1,8 @@
 #include <libc.h>
 #include <stdarg.h>
 #include <printf/printf.h>
+#include <spinlock.h>
+
 extern "C" int print_debug;
 static inline void outb(uint16_t port, uint8_t val)
 {
@@ -249,10 +251,23 @@ void putchar(char c) {
 extern "C" void putchar_(char c) {
     putchar(c);
 }
+
+spinlock_t *printf_spinlock = new spinlock_t;
+
+void spinlock_printf() {
+    if (printf_spinlock != NULL) spinlock_acquire(printf_spinlock);
+}
+
+void release_printf() {
+    if (printf_spinlock != NULL) spinlock_release(printf_spinlock);
+}
+
 void printf(const char *fmt, ...) {
     //va_list lst;
     //va_start(lst, fmt);
     //vsprintf(NULL, putchar, fmt, lst);
     //va_end(lst);
+    //spinlock_printf();
     printf_(fmt);
+    //release_printf();
 }

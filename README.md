@@ -10,3 +10,16 @@ TODO List:
  - [x] PMM
  - [x] VMM
  - [ ] and more
+
+# Building and running
+You need xorriso(for creating iso image), gcc(or clang, with amd64 instruction set support), nasm and make(reason why Makefile exists) 
+
+To build, use:
+```sh
+make # single core building
+make -j$(nproc) # or multi threaded building
+```
+
+As a result, you get:
+    - bin/kernel.elf - Kernel
+    - image.iso - Bootable iso image, BIOS/UEFI(x32 and x64) compatible

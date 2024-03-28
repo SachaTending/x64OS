@@ -47,6 +47,8 @@ OBJ =
 INCLUDES = 
 -include targets/*.mk
 override COMP_OBJ := $(OBJ)
+override HEADER_DEPS := $(OBJ:.o=.d)
+
 build: image.iso
 %.o: %.c
 	@echo "  [  CC] $@"
@@ -87,4 +89,4 @@ run_uefi:
 	@qemu-system-x86_64 -cdrom image.iso -serial stdio -smp cores=2 $(KVM) -bios /usr/share/ovmf/x64/OVMF.fd
 
 clean:
-	@-rm $(COMP_OBJ) bin/kernel.elf
+	@rm $(COMP_OBJ) bin/kernel.elf $(HEADER_DEPS) -f

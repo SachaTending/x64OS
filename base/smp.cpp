@@ -18,6 +18,8 @@ struct smp_task_t {
 
 smp_task_t tasks[64];
 
+uint64_t bsp_lapic_id;
+
 void smp_entry(limine_smp_info *smp) {
     int cid = smp->lapic_id;
     tasks[cid].cpu_ready = true;
@@ -33,13 +35,12 @@ void smp_entry(limine_smp_info *smp) {
 
 void smp_init() {
     log.info("CPU count: %u\n", smp_req.response->cpu_count);
+    bsp_lapic_id = smp_req.response->bsp_lapic_id;
     int cpu_id = 0;
     tasks[smp_req.response->bsp_lapic_id].cpu_ready = true;
     while (cpu_id <= smp_req.response->cpu_count-1 & cpu_id < sizeof(tasks)/sizeof(smp_task_t)) {
         log.debug("Starting cpu %d...\n", cpu_id+1);
-        while (tasks[cpu_id].cpu_ready != true) {
-            smp_req.response->cpus[cpu_id]->goto_address = smp_entry;
-        }
+        for (int i=0;i<1000;i++) smp_req.response->cpus[cpu_id]->goto_address = smp_entry;
         cpu_id += 1;
     }
 }

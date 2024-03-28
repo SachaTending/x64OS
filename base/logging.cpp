@@ -14,8 +14,8 @@ static inline uint64_t rdtsc()
 Logger::Logger(const char *name) {
     this->name = name; // TODO: strdup(name) instead of this
 }
-
-#define TICK 0
+extern size_t global_ticks;
+#define TICK global_ticks
 
 void Logger::info(const char *msg, ...) {
     printf("\e[97m[INFO][%u][%s]: ", TICK, this->name);

@@ -1,6 +1,7 @@
 #include <io.h>
 #include <idt.hpp>
 #include <stddef.h>
+#include <libc.h>
 
 extern size_t global_ticks;
 
@@ -17,6 +18,7 @@ void set_pit_count(unsigned count) {
 	cli();
  
 	// Set low byte
+    outb(0x43, 0x34);
 	outb(0x40,count&0xFF);		// Low byte
 	outb(0x40,(count&0xFF00)>>8);	// High byte
     sti();
@@ -31,7 +33,13 @@ void pit_set_frequency(uint64_t frequency) {
     set_pit_count((uint16_t)new_divisor);
 }
 
+void pit_int(idt_regs *regs) {
+    (void)regs;
+    global_ticks++;
+}
+
 void init_pit() {
-    pit_set_frequency(1);
+    pit_set_frequency(1000);
     //set_pit_count(0xff);
+    idt_set_int(1, pit_int);
 }

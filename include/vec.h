@@ -20,7 +20,7 @@
         } else { \
             VECTOR_ENSURE_LENGTH_vec->capacity *= 2; \
         } \
-        VECTOR_ENSURE_LENGTH_vec->data = realloc(VECTOR_ENSURE_LENGTH_vec->data, \
+            VECTOR_ENSURE_LENGTH_vec->data = realloc(VECTOR_ENSURE_LENGTH_vec->data, /* NOLINT */ \
             VECTOR_ENSURE_LENGTH_vec->capacity * sizeof(*VECTOR_ENSURE_LENGTH_vec->data)); /* NOLINT */ \
     } \
 } while (0)

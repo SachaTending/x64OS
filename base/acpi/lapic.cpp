@@ -21,6 +21,8 @@ static Logger log("LAPIC");
 
 size_t lapic_freq;
 
+uint32_t lapic_addr = 0xfee00000;
+
 static inline uint32_t lapic_read(uint32_t reg) {
     return *((volatile uint32_t *)((uintptr_t)0xfee00000 + reg));
 }
@@ -106,28 +108,16 @@ void PIC_remap(int offset1, int offset2)
 	outb(PIC2_DATA, a2);
 }
 
-void IRQ_set_mask(uint8_t IRQline) {
-    uint16_t port;
-    uint8_t value;
- 
-    if(IRQline < 8) {
-        port = PIC1_DATA;
-    } else {
-        port = PIC2_DATA;
-        IRQline -= 8;
-    }
-    value = inb(port) | (1 << IRQline);
-    outb(port, value);        
+void pic_disable(void) {
+    outb(PIC1_DATA, 0xff);
+    outb(PIC2_DATA, 0xff);
 }
 
 void lapic_init(void) {
     ASSERT((rdmsr(0x1b) & 0xfffff000) == 0xfee00000);
 
     // Disable PIC
-    for (uint8_t i=0;i<0xFF;i++) {
-        IRQ_set_mask(i);
-    }
-    PIC_remap(32, 32+7);
+    pic_disable();
     asm volatile ("sti");
 
     lapic_timer_calibrate();
@@ -158,6 +148,44 @@ uint16_t pit_get_current_count() {
  
 	return count;
 }
+
+static inline bool interrupt_state(void) {
+    uint64_t flags;
+    asm volatile ("pushfq; pop %0" : "=rm"(flags) :: "memory");
+    return flags & (1 << 9);
+}
+
+static inline void enable_interrupts(void) {
+    asm ("sti");
+}
+
+static inline void disable_interrupts(void) {
+    asm ("cli");
+}
+
+static inline bool interrupt_toggle(bool state) {
+    bool ret = interrupt_state();
+    if (state) {
+        enable_interrupts();
+    } else {
+        disable_interrupts();
+    }
+    return ret;
+}
+
+void lapic_timer_oneshot(uint64_t us, uint8_t vector) {
+    bool old_int_state = interrupt_toggle(false);
+    lapic_timer_stop();
+
+    uint64_t ticks = us * lapic_freq / 1000000;
+
+    lapic_write(LAPIC_REG_LVT_TIMER, vector);
+    lapic_write(LAPIC_REG_TIMER_DIV, 0);
+    lapic_write(LAPIC_REG_TIMER_INITCNT, ticks);
+
+    interrupt_toggle(old_int_state);
+}
+
 #define PIT_DIVIDEND ((uint64_t)1193182)
 void lapic_timer_calibrate(void) {
     lapic_timer_stop();
@@ -181,4 +209,8 @@ void lapic_timer_calibrate(void) {
     //this_cpu()->lapic_freq = (samples / total_ticks) * PIT_DIVIDEND;
     lapic_freq = (samples / total_ticks) * PIT_DIVIDEND;
     lapic_timer_stop();
+}
+
+void lapic_eoi(void) {
+    lapic_write(LAPIC_REG_EOI, LAPIC_EOI_ACK);
 }

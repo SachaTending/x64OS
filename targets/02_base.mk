@@ -1,14 +1,14 @@
 OBJ += $(addprefix base/, \
 	ssfn.o \
 	logging.o \
-	acpi.o \
-	smp.o \
-	lapic.o \
 	funny.o \
 	pit.o \
 	libcpp.o \
 	asm_stuff.o \
 	compinfo.o \
+	smp.o \
+	sched.o \
+	sched2.o \
 )
 
 base/compinfo.o:

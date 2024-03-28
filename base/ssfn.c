@@ -38,7 +38,7 @@ void movefb(void *dst, const void *src, size_t n) {
     for (size_t i=0;i<n;i++) {
         uint8_t v1 = p1[i];
         uint8_t v2 = p2[i];
-        if (v1 | v2 != v1) p1[i] = p2[i];
+        if (v1 || v2 != v1) p1[i] = p2[i];
     }
 }
 
@@ -82,8 +82,8 @@ end:
         if (fb2) {
             //__builtin_memcpy((void *)ssfn_dst.ptr, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             //__builtin_memcpy((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
-            memcpy((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
-            memcpy(ssfn_dst.ptr, fb2, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
+            __builtin_memcpy((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
+            __builtin_memcpy(ssfn_dst.ptr, fb2, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
         }
         else {
             __builtin_memcpy((void *)ssfn_dst.ptr, (void *)(uint64_t)(ssfn_dst.ptr+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
@@ -116,5 +116,6 @@ void ssfn_setup(struct limine_framebuffer *frb) {
     ssfn_dst.y = 10;
     ssfn_load(ctx, (const void *)&_binary_freesans_sfn_start);
 #endif
-    printf("ssfn_term: initialized, fb: %dx%dx%d, font: %dx%d\n", frb->width, frb->height, frb->bpp, ssfn_src->width, ssfn_src->height);
+    printf("ssfn_term: initialized, fb: %dx%dx%d fb_ptr: 0x%lx fb2_ptr: 0x%lx, ", frb->width, frb->height, frb->bpp, frb->address, fb2);
+    printf("font: %dx%d\n", ssfn_src->width, ssfn_src->height);
 }

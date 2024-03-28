@@ -24,8 +24,6 @@ typedef struct idt_entry // and again, fucking copied code.
 
 idt_entry_t idte[256];
 
-typedef void (*idt_handl)(idt_regs regs);
-
 void idt_regs_dump(idt_regs *regs) {
     printf("R08: 0x%016lx R09: 0x%016lx R10: 0x%016lx R11: 0x%016lx R12: 0x%016lx R13: 0x%016lx R14: 0x%016lx R15: 0x%016lx\n", regs->r8, regs->r9, regs->r10, regs->r11, regs->r12, regs->r13, regs->r14, regs->r15);
     printf("RIP: 0x%016lx RSP: 0x%016lx RBP: 0x%016lx RAX: 0x%016lx\n", regs->rip, regs->rsp, regs->rbp, regs->rax);
@@ -33,14 +31,16 @@ void idt_regs_dump(idt_regs *regs) {
 void stacktrace(uintptr_t *s);
 extern "C" uint64_t int_lst[256];
 idt_handl idt_handls[256];
+void lapic_eoi(void);
+void eoi(uint8_t irq);
 #define BIT(b) (1 << b)
-#define errcode_13_shift (1 >> regs.ErrorCode)
-extern "C" void idt_handler2(idt_regs regs) {
-    if (regs.IntNumber < 32) {
-        printf("OH NO: INT_%u ERR=0x%04x\n", regs.IntNumber, regs.ErrorCode);
-        if (regs.IntNumber == 13) {
+#define errcode_13_shift (1 >> regs->ErrorCode)
+extern "C" void idt_handler2(idt_regs *regs) {
+    if (regs->IntNumber < 32) {
+        printf("OH NO: INT_%u ERR=0x%04x\n", regs->IntNumber, regs->ErrorCode);
+        if (regs->IntNumber == 13) {
             lprint("Got #GD: ");
-            if (regs.ErrorCode & BIT(0)) {
+            if (regs->ErrorCode & BIT(0)) {
                 lprint("External ");
             }
             if (errcode_13_shift && 0b01) {
@@ -58,16 +58,17 @@ extern "C" void idt_handler2(idt_regs regs) {
             }
         }
         printf("Registers dump:\n");
-        idt_regs_dump(&regs);
+        idt_regs_dump(regs);
         stacktrace(0);
         for(;;);
     }
-    if (idt_handls[regs.IntNumber]) {
-        idt_handls[regs.IntNumber](regs);
+    if (idt_handls[regs->IntNumber-31]) {
+        idt_handls[regs->IntNumber-31](regs);
     } else {
-        printf("WARNING: Unknown int %u\n", regs.IntNumber);
+        printf("WARNING: Unknown int %u\n", regs->IntNumber);
         stacktrace(0);
     }
+    eoi(regs->IntNumber);
 }
 
 void idt_set_desc(uint64_t addr, int index, int gtype=0xE) {
@@ -80,6 +81,12 @@ void idt_set_desc(uint64_t addr, int index, int gtype=0xE) {
     e->GateType = gtype;
     e->Present = true;
 }
+
+
+void idt_set_int(uint64_t vec, idt_handl handl) {
+    idt_handls[vec] = handl;
+}
+
 static inline void lidt(void* base, uint16_t size)
 {
     // This function works in 32 and 64bit mode

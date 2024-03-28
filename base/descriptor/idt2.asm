@@ -26,7 +26,7 @@ extern idt_handler2
 	push ax
 	cmp  ax,  0x20     			  ; If the data segment is in user mode...
 	jne  .a1
-	;swapgs                        ; Swap to the kernel GS.
+	swapgs                        ; Swap to the kernel GS.
 .a1:
 	nop
 %endmacro
@@ -35,7 +35,7 @@ extern idt_handler2
 %macro POP_STATE 0
 	xor rax, rax
 	pop  ax
-	;mov  ds, ax
+	mov  ds, ax
 	cmp  ax,  0x20     			  ; If the data segment is in user mode...
 	jne  .a2
 	swapgs                        ; Swap to the user's GS.
@@ -88,7 +88,9 @@ int_common:
 	mov   rbp, rsp
 	cld                                    ; Clear direction flag, will be restored by iretq
 	mov   rdi, rsp                         ; Retrieve the idt_regs to call the trap handler
-	call  idt_handler2                              ; And call idt_handler!!
+	push  rdi							   ; Push pointer to registers
+	call  idt_handler2                     ; And call idt_handler!!
+	pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
 	mov   rsp, rax                         ; Use the new idt_regs instance as what to pull:
 	pop   rbp                              ; Leave the stack frame
 	pop   rcx                              ; Skip over the RIP duplicate that we pushed

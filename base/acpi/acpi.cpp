@@ -2,6 +2,7 @@
 #include <logging.hpp>
 #include <limine.h>
 #include <io.h>
+#include <acpi.hpp>
 
 extern limine_hhdm_request hhdm2;
 #define VMM_HIGHER_HALF hhdm2.response->offset
@@ -36,18 +37,6 @@ enum ACPI_TYPE {
 
 ACPI_TYPE type = RSDT;
 
-struct ACPISDTHeader {
-    char Signature[4];
-    uint32_t Length;
-    uint8_t Revision;
-    uint8_t Checksum;
-    char OEMID[6];
-    char OEMTableID[8];
-    uint32_t OEMRevision;
-    uint32_t CreatorID;
-    uint32_t CreatorRevision;
-};
-
 struct rsdt {
     ACPISDTHeader hdr;
     uint32_t tables[];
@@ -73,82 +62,6 @@ static uint64_t getaddr(size_t toff) {
     }
 }
 
-struct GenericAddressStructure
-{
-    uint8_t AddressSpace;
-    uint8_t BitWidth;
-    uint8_t BitOffset;
-    uint8_t AccessSize;
-    uint64_t Address;
-};
-
-struct FADT
-{
-    struct   ACPISDTHeader h;
-    uint32_t FirmwareCtrl;
-    uint32_t Dsdt;
- 
-    // field used in ACPI 1.0; no longer in use, for compatibility only
-    uint8_t  Reserved;
- 
-    uint8_t  PreferredPowerManagementProfile;
-    uint16_t SCI_Interrupt;
-    uint32_t SMI_CommandPort;
-    uint8_t  AcpiEnable;
-    uint8_t  AcpiDisable;
-    uint8_t  S4BIOS_REQ;
-    uint8_t  PSTATE_Control;
-    uint32_t PM1aEventBlock;
-    uint32_t PM1bEventBlock;
-    uint32_t PM1aControlBlock;
-    uint32_t PM1bControlBlock;
-    uint32_t PM2ControlBlock;
-    uint32_t PMTimerBlock;
-    uint32_t GPE0Block;
-    uint32_t GPE1Block;
-    uint8_t  PM1EventLength;
-    uint8_t  PM1ControlLength;
-    uint8_t  PM2ControlLength;
-    uint8_t  PMTimerLength;
-    uint8_t  GPE0Length;
-    uint8_t  GPE1Length;
-    uint8_t  GPE1Base;
-    uint8_t  CStateControl;
-    uint16_t WorstC2Latency;
-    uint16_t WorstC3Latency;
-    uint16_t FlushSize;
-    uint16_t FlushStride;
-    uint8_t  DutyOffset;
-    uint8_t  DutyWidth;
-    uint8_t  DayAlarm;
-    uint8_t  MonthAlarm;
-    uint8_t  Century;
- 
-    // reserved in ACPI 1.0; used since ACPI 2.0+
-    uint16_t BootArchitectureFlags;
- 
-    uint8_t  Reserved2;
-    uint32_t Flags;
- 
-    // 12 byte structure; see below for details
-    GenericAddressStructure ResetReg;
- 
-    uint8_t  ResetValue;
-    uint8_t  Reserved3[3];
- 
-    // 64bit pointers - Available on ACPI 2.0+
-    uint64_t                X_FirmwareControl;
-    uint64_t                X_Dsdt;
- 
-    GenericAddressStructure X_PM1aEventBlock;
-    GenericAddressStructure X_PM1bEventBlock;
-    GenericAddressStructure X_PM1aControlBlock;
-    GenericAddressStructure X_PM1bControlBlock;
-    GenericAddressStructure X_PM2ControlBlock;
-    GenericAddressStructure X_PMTimerBlock;
-    GenericAddressStructure X_GPE0Block;
-    GenericAddressStructure X_GPE1Block;
-};
 uint64_t find_table(const char *signature, int index) {
     int i2 = 0;
     size_t i = 0;
@@ -252,7 +165,6 @@ extern "C" {
         //log.info("LAI: UNMAP ADDR 0x%016lx SIZE %u\n", ptr, count);
     }
     void *laihost_scan(char *sig, size_t index) {
-        //log.info("LAI: SCAN SIG: %s INDEX: %u\n", sig, index);
         return (void *)find_table((const char *)sig, index);
     }
     uint8_t laihost_inb(uint16_t port) {

@@ -28,3 +28,7 @@ struct idt_regs
 	uint64_t rsp;
 	uint64_t ss;
 };
+
+typedef void (*idt_handl)(idt_regs *regs);
+
+void idt_set_int(uint64_t vec, idt_handl handl);

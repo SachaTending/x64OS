@@ -4,6 +4,7 @@
 #include <limine.h>
 #include <logging.hpp>
 #include <cpu.h>
+#include <ioapic.hpp>
 
 static Logger log("Kernel");
 
@@ -89,7 +90,7 @@ void print_memmap() {
 }
 void vmm_setup() {
 #if 1
-        trace(pagemap *pg = (pagemap *)malloc(sizeof(pagemap)));
+    trace(pagemap *pg = (pagemap *)malloc(sizeof(pagemap)));
     trace(memset(pg, 0, sizeof(pagemap)););
     trace(pg->top_level = (uint64_t *)pmm_alloc(1));
     pg->lock = SPINLOCK_INIT;
@@ -121,7 +122,7 @@ void vmm_setup() {
     for (uintptr_t addr = 0x0; addr < 0x100000000; addr += 4096) {
         oldpr = prog;
         prog = addr / (0x100000000 / 100);
-        if (addr >= 0x100000000) prog = 100;
+        if (addr >= 0x100000000 or addr >= 0x100000000-4096) prog = 100;
         if (oldpr != prog) log.info("Progress: %d%%\r", prog);
         vmm_map_page(pg, addr, addr, PTE_PRESENT | PTE_WRITABLE);
         vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE);
@@ -137,7 +138,9 @@ void smp_init();
 void funny();
 void lapic_init(void);
 void init_pit();
+void madt_init();
 
+extern uint64_t bsp_lapic_id;
 
 void fpu_init() {
     size_t t;
@@ -162,6 +165,9 @@ extern "C" {
 size_t global_ticks;
 
 
+void lapic_timer_oneshot(uint64_t us, uint8_t vector);
+void init_pic();
+
 void Kernel::Main() {
     if (krnl_called) return;
     krnl_called = true;
@@ -171,10 +177,11 @@ void Kernel::Main() {
     sse_enable();
     vmm_setup();
     acpi_init();
+    madt_init();
     //smp_init();
     log.info("SMP Not working.\n");
     init_pit();
-    lapic_init();
+    init_pic();
     //asm volatile ("int $32");
     log.info("well, init's entry ended succesfully, so kernel can start drivers, scheduler and other stuff, but no, its not implemented lol\n");
     log.info("Going to loop.\n");
