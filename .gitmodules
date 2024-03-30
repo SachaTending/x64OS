@@ -1,0 +1,3 @@
+[submodule "frigg"]
+	path = frigg
+	url = https://github.com/managarm/frigg.git

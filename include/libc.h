@@ -16,6 +16,8 @@ void *realloc(void *ptr, size_t l);
 
 size_t strlen(const char *str);
 void strcpy(char *dst, const char *src);
+int strcmp(const char *s1, const char *s2);
+const char *strdup(const char *in);
 void itoa(char *buf, unsigned long int n, int base);
 int atoi(char * string);
 

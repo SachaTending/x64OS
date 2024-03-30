@@ -12,6 +12,17 @@ static Logger log("libcpp");
 #define debug(...)
 #endif
 
+extern "C" {
+
+    void *__dso_handle = 0; //Attention! Optimally, you should remove the '= 0' part and define this in your asm script.
+    
+    int __cxa_atexit(void (*f)(void *), void *objptr, void *dso)
+    {
+        debug("__cxa_atexit called, args: deconstructor: 0x%lx, obj: 0x%lx, dso: 0x%lx\n", f, objptr, dso);
+        return 0;
+    }
+
+}
 
 void * operator new(size_t size) {
     debug("someone is trying to allocate data of size %u\n", size);

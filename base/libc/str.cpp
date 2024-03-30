@@ -75,5 +75,15 @@ extern "C" {
     int isspace(char c) {
         return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
     }
-
+    int strcmp(const char *s1, const char *s2) {
+        size_t l = strlen(s1);
+        return memcmp(s1, s2, l);
+    }
+    const char *strdup(const char *in) {
+        size_t l = strlen(in)+1;
+        const char *s = (const char *)malloc(l);
+        memset((void *)s, 0, l);
+        strcpy((char *)s, in);
+        return s;
+    }
 }

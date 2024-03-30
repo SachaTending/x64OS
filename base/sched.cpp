@@ -16,14 +16,6 @@ void dummy_task() {
     for (;;) asm volatile ("hlt"); // dummy task, does nothing.
 }
 
-const char *strdup(const char *in) {
-    size_t l = strlen(in);
-    void *a = malloc(l+1);
-    memset(a, 0, l+1);
-    strcpy((char *)a, in);
-    return (const char *)a;
-}
-
 void sched_init() {
     root_task = new task_t;
     root_task->regs.rip = (uint64_t)task_entry;
