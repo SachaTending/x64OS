@@ -20,6 +20,11 @@ TODO List:
  - [ ] Program loading
  - [ ] Drivers support
  - [ ] Networking
+    - [ ] Ethernet
+    - [ ] UDP
+    - [ ] TCP
+    - [ ] ICMP
+    - [ ] more protocols support
  - [ ] USB
 
 
