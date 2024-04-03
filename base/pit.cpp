@@ -43,5 +43,5 @@ void pit_int(idt_regs *regs) {
 void init_pit() {
     pit_set_frequency(1000);
     //set_pit_count(0xff);
-    idt_set_int(1, pit_int);
+    idt_set_int(0, pit_int);
 }

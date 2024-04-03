@@ -1,5 +1,6 @@
 #include <io.h>
 #include <logging.hpp>
+#include <idt.hpp>
 
 static Logger log("PIC");
 
@@ -23,7 +24,7 @@ void init_pic() {
     outb(PIC1_DATA, 0xff);
     outb(PIC2_DATA, 0xff); // mask ints to awoit pic triggering
     asm volatile ("cli");
-    PIC_remap(32, 32+8);
+    PIC_remap(MAP_BASE, MAP_BASE+8);
     log.info("Unmasking all interrupts\n");
     outb(PIC1_DATA, 0);
     outb(PIC2_DATA, 0);

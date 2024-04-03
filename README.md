@@ -9,7 +9,19 @@ TODO List:
  - [x] IDT
  - [x] PMM
  - [x] VMM
- - [ ] and more
+ - [x] Interrupts, timers
+ - [x] Serial port
+ - [x] Scheduler
+ - [ ] VFS
+    - [ ] tmpfs
+    - [ ] ext2/3/4
+    - [ ] fat32
+    - [ ] tarfs(basicly initrd)
+ - [ ] Program loading
+ - [ ] Drivers support
+ - [ ] Networking
+ - [ ] USB
+
 
 # Building and running
 You need xorriso(for creating iso image), gcc(or clang, with amd64 instruction set support), nasm and make(reason why Makefile exists) 

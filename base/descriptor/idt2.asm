@@ -2,6 +2,15 @@
 default rel
 section .text
 extern idt_handler2
+global fetch_cr0
+
+fetch_cr0:
+	push rbp
+	mov rbp, rsp
+	mov rax, cr0
+	mov rsp, rbp
+	pop rbp
+	ret
 
 %macro PUSH_STATE 0
 	push r8

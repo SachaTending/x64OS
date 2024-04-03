@@ -23,10 +23,15 @@ typedef struct idt_entry // and again, fucking copied code.
 } __attribute__((packed)) idt_entry_t;
 
 idt_entry_t idte[256];
-
+extern "C" uint64_t fetch_cr0(void);
 void idt_regs_dump(idt_regs *regs) {
     printf("R08: 0x%016lx R09: 0x%016lx R10: 0x%016lx R11: 0x%016lx R12: 0x%016lx R13: 0x%016lx R14: 0x%016lx R15: 0x%016lx\n", regs->r8, regs->r9, regs->r10, regs->r11, regs->r12, regs->r13, regs->r14, regs->r15);
     printf("RIP: 0x%016lx RSP: 0x%016lx RBP: 0x%016lx RAX: 0x%016lx\n", regs->rip, regs->rsp, regs->rbp, regs->rax);
+    printf("RBX: 0x%016lx RCX: 0x%016lx RDI: 0x%016lx RDX: 0x%016lx\n", regs->rbx, regs->rcx, regs->rdi, regs->rdx);
+    printf("RSI: 0x%016lx RFLAGS: 0x%016lx\n", regs->rsi, regs->rflags);
+    printf("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx FS: 0x%lx GS: 0x%lx\n", regs->cs, regs->ss, regs->ds, regs->es, regs->fs, regs->gs);
+    printf("SFRA: 0x%lx CR2: 0x%lx\n", regs->sfra, regs->cr2);
+    printf("CR0: 0x%lx\n", fetch_cr0());
 }
 void stacktrace(uintptr_t *s);
 extern "C" uint64_t int_lst[256];
@@ -39,31 +44,32 @@ extern "C" void idt_handler2(idt_regs *regs) {
     if (regs->IntNumber < 32) {
         printf("OH NO: INT_%u ERR=0x%04x\n", regs->IntNumber, regs->ErrorCode);
         if (regs->IntNumber == 13) {
-            lprint("Got #GD: ");
+            printf("Got #GD: ");
             if (regs->ErrorCode & BIT(0)) {
-                lprint("External ");
+                printf("External ");
             }
             if (errcode_13_shift && 0b01) {
                 if (errcode_13_shift && 0b10) {
                     if (errcode_13_shift && 0b11) {
-                        lprint("IDT(0b11) ");
+                        printf("IDT(0b11) ");
                     } else {
-                        lprint("LDT");
+                        printf("LDT");
                     }
                 } else {
-                    lprint("IDT ");
+                    printf("IDT ");
                 }
             } else {
-                lprint("GDT ");
+                printf("GDT ");
             }
         }
+        printf("\n");
         printf("Registers dump:\n");
         idt_regs_dump(regs);
         stacktrace(0);
         for(;;);
     }
-    if (idt_handls[regs->IntNumber-31]) {
-        idt_handls[regs->IntNumber-31](regs);
+    if (idt_handls[regs->IntNumber-MAP_BASE]) {
+        idt_handls[regs->IntNumber-MAP_BASE](regs);
     } else {
         printf("WARNING: Unknown int %u\n", regs->IntNumber);
         stacktrace(0);

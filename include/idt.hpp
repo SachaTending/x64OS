@@ -32,3 +32,5 @@ struct idt_regs
 typedef void (*idt_handl)(idt_regs *regs);
 
 void idt_set_int(uint64_t vec, idt_handl handl);
+
+#define MAP_BASE 32

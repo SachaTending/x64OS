@@ -5,7 +5,11 @@
 #include <libc.h>
 #include <new>
 
-typedef void (*get_file_t)(struct vfs_mnt *mnt);
+typedef struct vfs_node {
+
+} vfs_node_t;
+
+typedef vfs_node_t *(*get_file_t)(struct vfs_mnt *mnt, const char *path);
 
 typedef struct vfs_mnt {
     const char *path;
@@ -62,7 +66,7 @@ void vfs_mount(const char *block, const char *mnt_path, vfs_fs_t *fs) {
     vec.push_back((uintptr_t)mnt);
 }
 
-void vfs_get_file(const char *path) {
+vfs_node_t *vfs_get_node(const char *path) {
     size_t big_size = 0;
     size_t path_len = strlen(path);
     vfs_mnt_t *m;
@@ -75,6 +79,8 @@ void vfs_get_file(const char *path) {
             m = vec_get(i);
         }
     }
+    vfs_node_t *node = m->get_file(m, path+path_len);
+    return node;
 }
 
 void vfs_init() {
