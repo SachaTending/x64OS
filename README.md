@@ -38,5 +38,5 @@ make -j$(nproc) # or multi threaded building
 ```
 
 As a result, you get:
-    - bin/kernel.elf - Kernel
-    - image.iso - Bootable iso image, BIOS/UEFI(x32 and x64) compatible
+   - bin/kernel.elf: Kernel
+   - image.iso: Bootable iso image, BIOS/UEFI(x32 and x64) compatible
