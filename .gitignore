@@ -1,0 +1,4 @@
+*.o
+*.d
+/bin/kernel.elf
+/iso_root/kernel.elf

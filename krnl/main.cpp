@@ -200,8 +200,8 @@ void Kernel::Main() {
     //asm volatile ("int $32");
     log.info("Starting scheduler...\n");
     sched_init();
-    create_task(krnl_task, "x64oskrnl.elf MICROSOFT GO FUCK YOURSELF");
-    create_task(krnl2_task, "sailor moon webtv");
+    create_task(krnl_task, "task2");
+    create_task(krnl2_task, "task3");
     start_sched();
     for(;;);
 }
