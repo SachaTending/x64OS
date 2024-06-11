@@ -2,3 +2,4 @@
 *.d
 /bin/kernel.elf
 /iso_root/kernel.elf
+/image.iso
