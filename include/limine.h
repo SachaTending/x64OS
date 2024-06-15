@@ -310,7 +310,7 @@ struct limine_smp_info {
     uint32_t processor_id;
     uint32_t lapic_id;
     uint64_t reserved;
-    LIMINE_PTR(limine_goto_address) goto_address;
+    volatile LIMINE_PTR(limine_goto_address) goto_address;
     uint64_t extra_argument;
 };
 

@@ -85,7 +85,7 @@ run: image.iso
 rung: image.iso
 	@qemu-system-x86_64 -cdrom image.iso -serial stdio -s -S $(KVM) -m 256m
 
-run_uefi:
+run_uefi: image.iso
 	@qemu-system-x86_64 -cdrom image.iso -serial stdio -smp cores=2 $(KVM) -bios /usr/share/ovmf/x64/OVMF.fd
 
 clean:

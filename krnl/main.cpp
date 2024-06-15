@@ -89,6 +89,19 @@ void print_memmap() {
         if (m.response->entries[i]->base > max_addr) max_addr = m.response->entries[i]->base;
     }
 }
+
+pagemap *krnl_page;
+
+void map_vmm(uint64_t addr, size_t count) {
+    if (!krnl_page) return;
+    uint64_t start = ALIGN_DOWN(addr, 4096);
+    uint64_t end = ALIGN_UP(addr+count, 4096);
+    for (uint64_t a=start; a<end; a+=4096) {
+        vmm_map_page(krnl_page, a, a, PTE_WRITABLE | PTE_PRESENT);
+        vmm_map_page(krnl_page, a, a+VMM_HIGHER_HALF, PTE_WRITABLE | PTE_PRESENT);
+    }
+}
+
 void vmm_setup() {
 #if 1
     trace(pagemap *pg = (pagemap *)malloc(sizeof(pagemap)));
@@ -131,6 +144,7 @@ void vmm_setup() {
     printf("\n");
     log.info("Switching pages...\n");
     vmm_switch_to(pg);
+    krnl_page = pg;
 #endif
 }
 
@@ -193,8 +207,8 @@ void Kernel::Main() {
     vmm_setup();
     acpi_init();
     madt_init();
-    //smp_init();
-    log.info("SMP Not working.\n");
+    smp_init();
+    //log.info("SMP Not working.\n");
     init_pit();
     init_pic();
     //asm volatile ("int $32");

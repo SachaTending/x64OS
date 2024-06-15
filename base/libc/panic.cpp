@@ -1,7 +1,7 @@
 #include <libc.h>
 #include <printf/printf.h>
 void stacktrace(uintptr_t *s);
-void panic(const char *file, size_t lnum, const char *msg, ...) {
+__attribute__((noreturn)) void panic(const char *file, size_t lnum, const char *msg, ...) {
     asm volatile("cli");
     printf("KERNEL PANIC. At %s:%u\nReason: ", file, lnum);
     va_list lst;
@@ -14,7 +14,7 @@ void panic(const char *file, size_t lnum, const char *msg, ...) {
     asm volatile("1: hlt;jmp 1");
 }
 
-void assert(const char *file, size_t lnum, const char *line, bool res) {
+__attribute__((noreturn)) void assert(const char *file, size_t lnum, const char *line, bool res) {
     if (!res) {
         PANIC("ASSERTATION FAULT. At %s:%u: %s", file, lnum, line);
     }

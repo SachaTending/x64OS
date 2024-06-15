@@ -35,8 +35,8 @@ void ssfn_set_fg(uint32_t fg);
 void printf(const char *fmt, ...);
 void vsprintf(char *buf, void(*putc)(char), const char *fmt, va_list lst);
 
-void assert(const char *file, size_t lnum, const char *line, bool res);
-void panic(const char *file, size_t lnum, const char *msg, ...);
+__attribute__((noreturn)) void assert(const char *file, size_t lnum, const char *line, bool res);
+__attribute__((noreturn)) void panic(const char *file, size_t lnum, const char *msg, ...);
 
 #define ASSERT(a) assert(__FILE__, __LINE__, #a, a)
 #define PANIC(a, ...) panic(__FILE__, __LINE__, a, __VA_ARGS__)

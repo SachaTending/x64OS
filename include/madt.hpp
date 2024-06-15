@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
-#include <vec.h>
+#include <frg/vector.hpp>
+#include <frg/std_compat.hpp>
 
 struct madt_header {
     uint8_t id;
@@ -37,14 +38,16 @@ struct madt_nmi {
     uint8_t lint;
 } __attribute__((packed));
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-extern VECTOR_TYPE(struct madt_lapic *) madt_lapics;
-extern VECTOR_TYPE(struct madt_io_apic *) madt_io_apics;
-extern VECTOR_TYPE(struct madt_iso *) madt_isos;
-extern VECTOR_TYPE(struct madt_nmi *) madt_nmis;
+#define VECTOR(type) frg::vector<type, frg::stl_allocator>
 
-#ifdef __cplusplus
-}
+typedef VECTOR(struct madt_lapic *) madt_lapic_vec;
+typedef VECTOR(struct madt_io_apic *) madt_io_apic_vec;
+typedef VECTOR(struct madt_iso *) madt_iso_vec;
+typedef VECTOR(struct madt_nmi *) madt_nmi_vec;
+
+#ifndef MADT
+extern madt_lapic_vec madt_lapics;
+extern madt_io_apic_vec madt_io_apics;
+extern madt_iso_vec madt_isos;
+extern madt_nmi_vec madt_nmis;
 #endif
