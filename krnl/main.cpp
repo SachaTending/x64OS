@@ -132,12 +132,14 @@ void vmm_setup() {
     printf("\n");
     int prog = 0;
     int oldpr = 0;
+    uint64_t addr_end = 0x100000000;
     log.info("Mapping memory...\n");
-    for (uintptr_t addr = 0x0; addr < 0x100000000; addr += 4096) {
+    for (uintptr_t addr = 0x0; addr < addr_end; addr += 4096) {
         oldpr = prog;
-        prog = addr / (0x100000000 / 100);
-        if (addr >= 0x100000000 or addr >= 0x100000000-4096) prog = 100;
+        prog = addr / (addr_end / 100);
+        if (addr >= addr_end or addr >= addr_end-4096) prog = 100;
         if (oldpr != prog) log.info("Progress: %d%%\r", prog);
+        //log.info("Progress: %d%% Address: 0x%016lx\r", prog, addr);
         vmm_map_page(pg, addr, addr, PTE_PRESENT | PTE_WRITABLE);
         vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE);
     }
@@ -154,6 +156,7 @@ void funny();
 void lapic_init(void);
 void init_pit();
 void madt_init();
+void parse_opts();
 
 extern uint64_t bsp_lapic_id;
 
@@ -206,6 +209,7 @@ void Kernel::Main() {
     sse_enable();
     vmm_setup();
     acpi_init();
+    parse_opts();
     madt_init();
     smp_init();
     //log.info("SMP Not working.\n");

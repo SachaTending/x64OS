@@ -86,4 +86,10 @@ extern "C" {
         strcpy((char *)s, in);
         return s;
     }
+    char* strchr(const char* str, int c) {
+        int i = 0;
+        size_t sl = strlen(str);
+        while (i < sl && str[i] != c) ++i;
+        return c == str[i] ? (char*)str + i : NULL;
+    }
 }

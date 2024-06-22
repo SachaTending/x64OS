@@ -52,6 +52,12 @@ limine_efi_system_table_request efiTable = {
     .response = 0
 };
 
+limine_kernel_file_request limine_krnl_file = {
+    .id = LIMINE_KERNEL_FILE_REQUEST,
+    .revision = 0,
+    .response = 0
+};
+
 void pmm_init(void);
 extern "C" void ssfn_setup(struct limine_framebuffer *frb);
 extern "C" void ssfn_set_fg(uint32_t fg);
@@ -146,7 +152,8 @@ extern "C" void _start() {
     pmm_init();
     fb2 = malloc(framebuffer_request.response->framebuffers[0]->width*framebuffer_request.response->framebuffers[0]->pitch);
     ssfn_setup(framebuffer_request.response->framebuffers[0]);
-    printf("Allocated fb2 at 0x%lp\n", fb2);
+    printf("Allocated fb2 at 0x%lx\n", fb2);
+    printf("Framebuffer count: %lu\n", framebuffer_request.response->framebuffer_count);
     printf("Loading GDT...");
     GDT::Init();
     ok();

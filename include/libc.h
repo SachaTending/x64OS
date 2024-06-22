@@ -18,6 +18,7 @@ size_t strlen(const char *str);
 void strcpy(char *dst, const char *src);
 int strcmp(const char *s1, const char *s2);
 const char *strdup(const char *in);
+char* strchr(const char* str, int c);
 void itoa(char *buf, unsigned long int n, int base);
 int atoi(char * string);
 
@@ -39,7 +40,7 @@ __attribute__((noreturn)) void assert(const char *file, size_t lnum, const char 
 __attribute__((noreturn)) void panic(const char *file, size_t lnum, const char *msg, ...);
 
 #define ASSERT(a) assert(__FILE__, __LINE__, #a, a)
-#define PANIC(a, ...) panic(__FILE__, __LINE__, a, __VA_ARGS__)
+#define PANIC(...) panic(__FILE__, __LINE__, __VA_ARGS__)
 
 #ifdef __cplusplus
 }

@@ -2,11 +2,8 @@
 #include <elf.h>
 #include <limine.h>
 
-limine_kernel_file_request krnl_file = {
-    .id = LIMINE_KERNEL_FILE_REQUEST,
-    .revision = 0,
-    .response = 0
-};
+extern limine_kernel_file_request limine_krnl_file;
+#define krnl_file limine_krnl_file
 
 char *strtab_real;
 size_t strtab_size;
@@ -17,7 +14,7 @@ uint64_t kaslr_off;
 
 extern char kernel_start;
 
-Elf64_Sym n = {0,0,0,0,0};
+Elf64_Sym n = {0,0,0,0,0,0};
 
 Elf64_Sym *find_sym(uint64_t addr);
 Elf64_Sym *stack_lookup(uintptr_t addr) {

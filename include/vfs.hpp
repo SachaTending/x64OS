@@ -6,11 +6,13 @@ typedef struct vfs_node {
 } vfs_node_t;
 
 typedef vfs_node_t *(*get_file_t)(struct vfs_mnt *mnt, const char *path);
+typedef vfs_node_t *(*create_fite_t)(struct vfs_mnt *mnt, const char *path);
 
 typedef struct vfs_mnt {
     const char *path;
     void *priv;
     get_file_t get_file;
+    create_fite_t create_file;
 } vfs_mnt_t;
 
 typedef bool (*probe_fs_t)(struct vfs_fs *fs, const char *block);
