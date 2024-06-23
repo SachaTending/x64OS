@@ -252,14 +252,14 @@ extern "C" void putchar_(char c) {
     putchar(c);
 }
 
-spinlock_t *printf_spinlock = new spinlock_t;
+spinlock_t print_spinlock = SPINLOCK_INIT;
 
 void spinlock_printf() {
-    if (printf_spinlock != NULL) spinlock_acquire(printf_spinlock);
+    spinlock_acquire(&print_spinlock);
 }
 
 void release_printf() {
-    if (printf_spinlock != NULL) spinlock_release(printf_spinlock);
+    spinlock_release(&print_spinlock);
 }
 
 void printf(const char *fmt, ...) {
@@ -267,7 +267,7 @@ void printf(const char *fmt, ...) {
     //va_start(lst, fmt);
     //vsprintf(NULL, putchar, fmt, lst);
     //va_end(lst);
-    //spinlock_printf();
+    //spinlock_acquire(&print_spinlock);
     printf_(fmt);
-    //release_printf();
+    //spinlock_release(&print_spinlock);
 }

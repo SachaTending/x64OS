@@ -13,7 +13,9 @@ typedef struct {
 #define SPINLOCK_INIT {0, NULL}
 
 static inline bool spinlock_test_and_acq(spinlock_t *lock) {
-    return CAS(&lock->lock, 0, 1);
+    if (lock->lock) return 0;
+    lock->lock = 1;
+    return 1;
 }
 #ifdef __cplusplus
 extern "C" {
@@ -25,5 +27,5 @@ void spinlock_acquire_no_dead_check(spinlock_t *lock);
 #endif
 static inline void spinlock_release(spinlock_t *lock) {
     lock->last_acquirer = NULL;
-    CAS(&lock->lock, 1, 0);
+    lock->lock = 0;
 }

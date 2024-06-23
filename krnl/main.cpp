@@ -186,7 +186,7 @@ size_t global_ticks;
 void lapic_timer_oneshot(uint64_t us, uint8_t vector);
 void init_pic();
 
-void krnl_task() {
+int krnl_task() {
     log.info("multitaskin'\n");
     task_t *t = root_task;
     do {
@@ -196,8 +196,9 @@ void krnl_task() {
     for(;;) asm volatile ("hlt");
 }
 
-void krnl2_task() {
-    for(;;);
+int krnl2_task() {
+    //for(;;);
+    return 255;
 }
 
 void Kernel::Main() {

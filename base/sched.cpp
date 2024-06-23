@@ -38,7 +38,7 @@ void start_sched() {
 bool SCHED_STOP = false;
 spinlock_t sched_lock = SPINLOCK_INIT;
 
-void create_task(void (*task)(), const char *name) {
+void create_task(int (*task)(), const char *name) {
     SCHED_STOP = true;
     spinlock_acquire(&sched_lock);
     task_t *new_task = new task_t;

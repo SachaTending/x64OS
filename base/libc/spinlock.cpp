@@ -3,6 +3,7 @@
 
 extern "C" {
     __attribute__((noinline)) void spinlock_acquire(spinlock_t *lock) {
+        if (spinlock_test_and_acq(lock)) return;
         volatile size_t deadlock_counter = 0;
         for (;;) {
             if (spinlock_test_and_acq(lock)) {

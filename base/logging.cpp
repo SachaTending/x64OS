@@ -2,6 +2,9 @@
 #include <logging.hpp>
 #include <printf/printf.h>
 
+void spinlock_printf();
+void release_printf();
+
 void putchar(char c);
 extern "C" int print_debug = 0;
 static inline uint64_t rdtsc()
