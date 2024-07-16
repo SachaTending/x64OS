@@ -193,6 +193,7 @@ int krnl_task() {
         log.info("Task: %s PID: %u\n", t->name, t->pid);
         t = t->next;
     } while (t != root_task);
+    log.info("RAM Used: %lu bytes\n", used_ram);
     for(;;) asm volatile ("hlt");
 }
 

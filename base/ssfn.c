@@ -116,6 +116,6 @@ void ssfn_setup(struct limine_framebuffer *frb) {
     ssfn_dst.y = 10;
     ssfn_load(ctx, (const void *)&_binary_freesans_sfn_start);
 #endif
-    printf("ssfn_term: initialized, fb: %dx%dx%d fb_ptr: 0x%lx fb2_ptr: 0x%lx, ", frb->width, frb->height, frb->bpp, frb->address, fb2);
-    printf("font: %dx%d\n", ssfn_src->width, ssfn_src->height);
+    printf("ssfn_term: initialized, fb: %dx%dx%d fb_ptr: 0x%lx fb2_ptr: 0x%lx\n", frb->width, frb->height, frb->bpp, frb->address, fb2);
+    printf("ssfn_term: font size %dx%d\n", ssfn_src->width, ssfn_src->height);
 }

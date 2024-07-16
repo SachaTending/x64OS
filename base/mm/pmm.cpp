@@ -54,6 +54,8 @@ static uint64_t usable_pages = 0;
 static uint64_t used_pages = 0;
 static uint64_t reserved_pages = 0;
 
+extern size_t used_ram;
+
 static inline bool bitmap_test(void *bitmap, size_t bit) {
     uint8_t *bitmap_u8 = (uint8_t *)bitmap;
     return bitmap_u8[bit / 8] & (1 << (bit % 8));
@@ -318,6 +320,8 @@ void *slab_alloc(size_t size) {
     metadata->pages = page_count;
     metadata->size = size;
 
+    used_ram += size;
+
     return ret + PAGE_SIZE;
 }
 
@@ -372,6 +376,7 @@ void slab_free(void *addr) {
 
     if (((uintptr_t)addr & 0xfff) == 0) {
         struct alloc_metadata *metadata = (struct alloc_metadata *)(addr - PAGE_SIZE);
+        used_ram -= metadata->size;
         pmm_free((void *)metadata - VMM_HIGHER_HALF, metadata->pages + 1);
         return;
     }
@@ -382,7 +387,8 @@ void slab_free(void *addr) {
 
 extern "C" {
     void *malloc(size_t size) {
-        return slab_alloc(size);
+        void *out = slab_alloc(size);
+        return out;
     }
     void free(void *ptr) {
         slab_free(ptr);
@@ -394,3 +400,5 @@ extern "C" {
         return slab_realloc(ptr, l);
     }
 }
+
+size_t used_ram=0;

@@ -10,6 +10,7 @@ OBJ += $(addprefix base/, \
 	sched.o \
 	sched2.o \
 	vfs.o \
+	syscall.o \
 )
 
 base/compinfo.o:

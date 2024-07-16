@@ -45,3 +45,7 @@ __attribute__((noreturn)) void panic(const char *file, size_t lnum, const char *
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef __cplusplus
+extern size_t used_ram;
+#endif

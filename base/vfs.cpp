@@ -58,13 +58,13 @@ vfs_node_t *vfs_get_node(const char *path) {
     return node;
 }
 
-vfs_node_t *vfs_create_file(const char *path) {
+vfs_node_t *vfs_create_file(const char *path, bool is_dir) {
     vfs_mnt_t *mnt = vfs_get_mnt(path);
     if (mnt == NULL) {
         return NULL;
     }
     size_t plen = strlen(mnt->path);
-    vfs_node_t *node = mnt->create_file(mnt, path+plen);
+    vfs_node_t *node = mnt->create_file(mnt, path+plen, is_dir);
     return node;
 }
 

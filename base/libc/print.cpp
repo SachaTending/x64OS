@@ -144,7 +144,7 @@ void vsprintf_helper(char * str, void (*putchar)(char), const char * format, uin
 
 void vsprintf(char *buf, void(*putc)(char), const char *fmt, va_list lst) {
     uint64_t pos = 0;
-    pos = 0; // ensure that its zero
+    pos = 0; // ensure that it's zero
     vsprintf_helper(buf, putc, fmt, &pos, lst);
 }
 

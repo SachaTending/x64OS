@@ -23,6 +23,8 @@ fetch_cr0:
 	push r15
 	push rsi
 	push rdi
+	;mov  rax, cr3
+	;push rax
 	mov  rax, cr2
 	push rax
 	mov  ax,  gs
@@ -60,6 +62,8 @@ fetch_cr0:
 	mov ax, 0x10
 	mov  gs, ax
 	add  rsp, 8    ; the space occupied by the cr2 register
+	;pop  rax
+	;mov  cr3, rax
 	pop  rdi
 	pop  rsi
 	pop  r15

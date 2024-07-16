@@ -40,7 +40,6 @@ void parse_opts() {
         memcpy((void *)opt, cmdline_pntr, space_pos);
         find_chr('=', eq_pos,0, opt);
         bool is_no_val = eq_pos ? 0:1;
-        log.info("%s %d\n", opt, is_no_val);
         opt_t opt_struct = {
             .opt_name = opt,
             .opt_val = is_no_val?opt+eq_pos:0,
