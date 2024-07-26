@@ -10,13 +10,14 @@ TODO List:
  - [x] PMM
  - [x] VMM
  - [x] Interrupts, timers
- - [x] Serial port
+ - [x] Serial port(only COM1)
  - [x] Scheduler
- - [ ] VFS
-    - [ ] tmpfs
+ - [X] VFS
+    - [X] tmpfs
     - [ ] ext2/3/4
     - [ ] fat32
     - [ ] tarfs(basicly initrd)
+    - [ ] Getting list of files and other stuff
  - [ ] Program loading
  - [ ] Drivers support
  - [ ] Networking
@@ -40,3 +41,14 @@ make -j$(nproc) # or multi threaded building
 As a result, you get:
    - bin/kernel.elf: Kernel
    - image.iso: Bootable iso image, BIOS/UEFI(x32 and x64) compatible
+
+# Used source code/tools
+Limine as bootloader
+
+PMM Code taken from Lure OS
+
+IDT/GDT Code taken from Boron OS
+
+Frigg from managram project
+
+Freestanding headers by mintsuki https://github.com/osdev0/freestanding-headers

@@ -26,7 +26,7 @@ override CPPFLAGS := \
     $(CFLAGS) \
     -MMD \
     -MP \
-	-fpermissive -fno-threadsafe-statics -fno-use-cxa-atexit -fno-rtti  -fno-exceptions
+	-fpermissive -fno-threadsafe-statics -fno-use-cxa-atexit -fno-rtti  -fno-exceptions -fno-use-cxa-atexit
  
 # Internal linker flags that should not be changed by the user.
 override LDFLAGS += \

@@ -21,7 +21,7 @@ extern size_t global_ticks;
 #define TICK global_ticks
 
 void Logger::info(const char *msg, ...) {
-    printf("\e[97m[INFO][%u][%s]: ", TICK, this->name);
+    printf("\e[97m[INFO][%lu][%u][%s]: ", used_ram, TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf_(msg, lst);
@@ -29,7 +29,7 @@ void Logger::info(const char *msg, ...) {
 }
 
 void Logger::error(const char *msg, ...) {
-    printf("\e[31m[ERROR][%u][%s]: ", TICK, this->name);
+    printf("\e[31m[ERROR][%lu][%u][%s]: ", used_ram, TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf_(msg, lst);
@@ -39,7 +39,7 @@ void Logger::error(const char *msg, ...) {
 
 void Logger::debug(const char *msg, ...) {
     print_debug = 1;
-    printf("\e[34m[DEBUG][%u][%s]: ", TICK, this->name);
+    printf("\e[34m[DEBUG][%lu][%u][%s]: ", used_ram, TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf_(msg, lst);

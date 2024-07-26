@@ -12,7 +12,7 @@ void sys_print(const char *txt, uint64_t len) {
 void int80(idt_regs *regs) {
     switch (regs->rax)
     {
-        case 1:
+        case 2:
             if (regs->rdi == 1) { 
                 sys_print((const char *)regs->rsi, regs->rdx);
             }

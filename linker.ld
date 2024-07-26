@@ -47,8 +47,11 @@ SECTIONS
     } :data
 
     .symtab : {
-        KEEP(*(.dynsym));
         KEEP(*(.symtab));
+        KEEP(*(.dynsym));
+    }
+    .dynsym : {
+        KEEP(*(.dynsym));
     }
 
     /* Dynamic section for relocations, both in its own PHDR and inside data PHDR */

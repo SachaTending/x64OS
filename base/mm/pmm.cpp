@@ -395,7 +395,9 @@ extern "C" {
     }
     void *realloc(void *ptr, size_t l) {
         if (!ptr) {
-            return malloc(l);
+            void *ptr = malloc(l);
+            memset(ptr, 0, l);
+            return ptr;
         }
         return slab_realloc(ptr, l);
     }

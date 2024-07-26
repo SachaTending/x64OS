@@ -58,3 +58,7 @@ void operator delete[](void *ptr) {
     debug("someone is trying to deallocate data at 0x%lx\n", ptr);
     free(ptr);
 }
+
+extern "C" void atexit() {
+    
+}

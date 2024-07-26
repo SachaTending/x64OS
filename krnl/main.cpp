@@ -45,23 +45,6 @@ const char *memmap_type_str(int t) {
     }
 }
 extern "C" uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate);
-#define DIV_ROUNDUP(VALUE, DIV) ({ \
-    typeof(VALUE) DIV_ROUNDUP_value = VALUE; \
-    typeof(DIV) DIV_ROUNDUP_div = DIV; \
-    (DIV_ROUNDUP_value + (DIV_ROUNDUP_div - 1)) / DIV_ROUNDUP_div; \
-})
-
-#define ALIGN_UP(VALUE, ALIGN) ({ \
-    typeof(VALUE) ALIGN_UP_value = VALUE; \
-    typeof(ALIGN) ALIGN_UP_align = ALIGN; \
-    DIV_ROUNDUP(ALIGN_UP_value, ALIGN_UP_align) * ALIGN_UP_align; \
-})
-
-#define ALIGN_DOWN(VALUE, ALIGN) ({ \
-    typeof(VALUE) ALIGN_DOWN_value = VALUE; \
-    typeof(VALUE) ALIGN_DOWN_align = ALIGN; \
-    (ALIGN_DOWN_value / ALIGN_DOWN_align) * ALIGN_DOWN_align; \
-})
 
 extern uint64_t kernel_start;
 extern uint64_t kernel_end;
@@ -186,6 +169,10 @@ size_t global_ticks;
 void lapic_timer_oneshot(uint64_t us, uint8_t vector);
 void init_pic();
 
+#include <vfs.hpp>
+
+vfs_fs_t *tmpfs_create_fs();
+void unpack_initrd();
 int krnl_task() {
     log.info("multitaskin'\n");
     task_t *t = root_task;
@@ -193,7 +180,24 @@ int krnl_task() {
         log.info("Task: %s PID: %u\n", t->name, t->pid);
         t = t->next;
     } while (t != root_task);
-    log.info("RAM Used: %lu bytes\n", used_ram);
+    log.info("Mounting tmpfs...\n");
+    vfs_fs_t *fs = tmpfs_create_fs();
+    int ret = vfs_mount("none", "/", fs);
+    if (ret != 0) {
+        PANIC("Failed to mount tmpfs, ret=%d\n", ret);
+    }
+    log.info("Unpacking ramdisk...\n");
+    unpack_initrd();
+    vfs_node_t *n = vfs_get_node("/hello_world");
+    if (n == NULL) {
+        log.info("cannot get file, bruh.\n");
+    } else {
+        char *buf = new char[1500];
+        n->read(n, buf, 150);
+        log.info("File content: %s\n", buf);
+        delete[] buf;
+        n->close(n);
+    }
     for(;;) asm volatile ("hlt");
 }
 
@@ -221,7 +225,7 @@ void Kernel::Main() {
     log.info("Starting scheduler...\n");
     sched_init();
     create_task(krnl_task, "task2");
-    create_task(krnl2_task, "task3");
+    create_task(krnl2_task, "task3(should exit)");
     start_sched();
     for(;;);
 }

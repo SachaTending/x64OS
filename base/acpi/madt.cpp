@@ -3,9 +3,9 @@
 #include <libc.h>
 #define MADT
 #include <madt.hpp>
+#include <new>
 #include <frg/std_compat.hpp>
 #include <frg/vector.hpp>
-#include <new>
 
 static Logger log("APIC");
 

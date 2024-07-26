@@ -17,3 +17,9 @@ load_gdt: ; did you know that this asm code taken from boron os? No? Compare thi
 	mov gs, ax
 	mov ss, ax
 	ret
+
+global load_tss
+load_tss:
+	mov ax, di
+	ltr ax
+	ret

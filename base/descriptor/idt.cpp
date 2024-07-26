@@ -48,9 +48,9 @@ extern "C" void idt_handler2(idt_regs *regs) {
             if (regs->ErrorCode & BIT(0)) {
                 printf("External ");
             }
-            if (errcode_13_shift && 0b01) {
-                if (errcode_13_shift && 0b10) {
-                    if (errcode_13_shift && 0b11) {
+            if (errcode_13_shift & 0b01) {
+                if (errcode_13_shift & 0b10) {
+                    if (errcode_13_shift & 0b11) {
                         printf("IDT(0b11) ");
                     } else {
                         printf("LDT");

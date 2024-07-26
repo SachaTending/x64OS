@@ -11,6 +11,7 @@ OBJ += $(addprefix base/, \
 	sched2.o \
 	vfs.o \
 	syscall.o \
+	unpack_initrd.o \
 )
 
 base/compinfo.o:
