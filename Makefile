@@ -37,7 +37,7 @@ override LDFLAGS += \
     -pie \
     -z text \
     -z max-page-size=0x1000 \
-    -T linker.ld --export-dynamic
+    -T linker.ld --export-dynamic -g
 
 # Internal nasm flags that should not be changed by the user.
 override NASMFLAGS += -f elf64 -g

@@ -146,7 +146,7 @@ extern "C" {
     extern const char *compdate;
     extern const char *compmachine;
 }
-
+void print_cpu();
 extern "C" void _start() {
  
     // Ensure we got a framebuffer.
@@ -170,6 +170,7 @@ extern "C" void _start() {
     printf("x64OS kernel, compiled on %s, machine: %s\n", compdate, compmachine);
     printf("Booted by %s version %s\n", btldr_info.response->name, btldr_info.response->version);
     printf("Running on %s system\n", efiTable.response ? "UEFI":"BIOS");
+    print_cpu();
     //printf("Copying framebuffer, this may take a while(depending on your screen size)...\n");
     //copyfb(fb2, framebuffer_request.response->framebuffers[0]->address, framebuffer_request.response->framebuffers[0]->width*framebuffer_request.response->framebuffers[0]->pitch);
     callConstructors();

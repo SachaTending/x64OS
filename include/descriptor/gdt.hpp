@@ -21,3 +21,5 @@ namespace GDT
 {
     void Init();    
 } // namespace GDT
+
+void gdt_set_tss(uint64_t tss);

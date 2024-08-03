@@ -12,6 +12,8 @@ OBJ += $(addprefix base/, \
 	vfs.o \
 	syscall.o \
 	unpack_initrd.o \
+	tss.o \
+	cpuid.o \
 )
 
 base/compinfo.o:

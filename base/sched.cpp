@@ -38,7 +38,7 @@ void start_sched() {
 bool SCHED_STOP = false;
 spinlock_t sched_lock = SPINLOCK_INIT;
 
-void create_task(int (*task)(), const char *name) {
+void create_task(int (*task)(), const char *name, bool usermode=false) {
     SCHED_STOP = true;
     spinlock_acquire(&sched_lock);
     task_t *new_task = new task_t;
@@ -50,6 +50,9 @@ void create_task(int (*task)(), const char *name) {
     new_task->regs.rip = (uint64_t)task_entry;
     new_task->regs.rax = (uint64_t)task;
     new_task->regs.rsp = (uint64_t)malloc(64*1024)+64*1024;
+    if (usermode == true) {
+        new_task->regs.cs = new_task->regs.gs = new_task->regs.ds = new_task->regs.fs = new_task->regs.ss = 0x20;
+    }
     task_t *task_p = root_task;
     do {
         task_p = task_p->next;
@@ -76,24 +79,28 @@ void sched_handl(idt_regs *regs) {
     if (!SCHED_READY) return;
     if (!SCHED_STARTED) {
         root_task->regs.cr2 = regs->cr2;
-        root_task->regs.cs = regs->cs;
-        root_task->regs.es = regs->es;
-        root_task->regs.fs = regs->fs;
-        root_task->regs.gs = regs->gs;
-        root_task->regs.ds = regs->ds;
-        root_task->regs.ss = regs->ss;
+        if (root_task->regs.cs == 0) {
+            root_task->regs.cs = regs->cs;
+            root_task->regs.es = regs->es;
+            root_task->regs.fs = regs->fs;
+            root_task->regs.gs = regs->gs;
+            root_task->regs.ds = regs->ds;
+            root_task->regs.ss = regs->ss;
+        }
         SCHED_STARTED = true;
     }
     else save_regs(regs);
     current_task->state = TASK_READY;
     task_t *ntask = current_task->next;
     ntask->regs.cr2 = regs->cr2;
-    ntask->regs.cs = regs->cs;
-    ntask->regs.es = regs->es;
-    ntask->regs.fs = regs->fs;
-    ntask->regs.gs = regs->gs;
-    ntask->regs.ds = regs->ds;
-    ntask->regs.ss = regs->ss;
+    if (ntask->regs.cs == 0) {
+        ntask->regs.cs = regs->cs;
+        ntask->regs.es = regs->es;
+        ntask->regs.fs = regs->fs;
+        ntask->regs.gs = regs->gs;
+        ntask->regs.ds = regs->ds;
+        ntask->regs.ss = regs->ss;
+    }
     load_regs(ntask, regs);
     ntask->state = TASK_RUNNING;
     current_task = ntask;

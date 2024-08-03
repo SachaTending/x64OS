@@ -50,6 +50,9 @@ extern uint64_t kernel_start;
 extern uint64_t kernel_end;
 #define PTE_PRESENT (1ull << 0ull)
 #define PTE_WRITABLE (1ull << 1ull)
+#define PTE_USER (1ull << 2ull)
+
+
 extern "C" void vmm_switch_to(struct pagemap *pagemap);
 extern "C" void *pmm_alloc(size_t pages);
 
@@ -110,7 +113,7 @@ void vmm_setup() {
     for (uintptr_t addr=kstart;addr<kend;addr+=4096) {
         uint64_t phys = addr - kaddr.response->virtual_base + kaddr.response->physical_base;
         log.info("Mapping 0x%016lx\r", addr);
-        vmm_map_page(pg, addr, phys, PTE_WRITABLE | PTE_PRESENT);
+        vmm_map_page(pg, addr, phys, PTE_WRITABLE | PTE_PRESENT | PTE_USER);
     }
     printf("\n");
     int prog = 0;
@@ -123,8 +126,8 @@ void vmm_setup() {
         if (addr >= addr_end or addr >= addr_end-4096) prog = 100;
         if (oldpr != prog) log.info("Progress: %d%%\r", prog);
         //log.info("Progress: %d%% Address: 0x%016lx\r", prog, addr);
-        vmm_map_page(pg, addr, addr, PTE_PRESENT | PTE_WRITABLE);
-        vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE);
+        vmm_map_page(pg, addr, addr, PTE_PRESENT | PTE_WRITABLE | PTE_USER);
+        vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE | PTE_USER);
     }
     printf("\n");
     log.info("Switching pages...\n");
@@ -206,6 +209,14 @@ int krnl2_task() {
     return 255;
 }
 
+extern "C" int test_user_function() {
+    log.info("User mode, lol\n");
+    for(;;);
+}
+
+extern "C" int jump_to_usermode();
+
+void init_tss();
 void Kernel::Main() {
     if (krnl_called) return;
     krnl_called = true;
@@ -222,10 +233,15 @@ void Kernel::Main() {
     init_pit();
     init_pic();
     //asm volatile ("int $32");
+    log.info("Initializing TSS...\n");
+    init_tss();
+    log.info("%lx\n", *((uint32_t *)test_user_function));
+    //for(;;);
     log.info("Starting scheduler...\n");
     sched_init();
     create_task(krnl_task, "task2");
     create_task(krnl2_task, "task3(should exit)");
+    create_task(test_user_function, "usermode", true);
     start_sched();
     for(;;);
 }

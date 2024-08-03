@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <descriptor/gdt.hpp>
+#include <tss.h>
 
 struct gdt_descriptor {
     uint16_t limit = 0;
@@ -21,9 +22,20 @@ struct tss_descriptor {
     uint32_t reserved = 0;
 };
 
+typedef struct tes_desc2
+{
+	uint64_t Limit1 : 16;
+	uint64_t Base1  : 24;
+	uint64_t Access : 8;
+	uint64_t Limit2 : 4;
+	uint64_t Flags  : 4;
+	uint64_t Base2  : 40;
+	uint64_t Resvd  : 32;
+} tss_desc2_t;
+
 struct gdt {
     struct gdt_descriptor descriptors[11];
-    struct tss_descriptor tss;
+    tss_desc2_t tss;
 };
 
 struct gdtr {
@@ -34,6 +46,8 @@ struct gdtr {
 static struct gdt gdt = {0};
 static struct gdtr gdtr = {0};
 void gdt_reload(void);
+#define offsetof __builtin_offsetof
+#include <libc.h>
 void GDT::Init() {
     // Null descriptor.
     gdt.descriptors[0].limit       = 0;
@@ -112,20 +126,33 @@ void GDT::Init() {
     gdt.descriptors[10].base_high8  = 0;
 
     // TSS.
-    gdt.tss.length       = 104;
-    gdt.tss.base_low16   = 0;
-    gdt.tss.base_mid8    = 0;
-    gdt.tss.flags1       = 0b10001001;
-    gdt.tss.flags2       = 0;
-    gdt.tss.base_high8   = 0;
-    gdt.tss.base_upper32 = 0;
-    gdt.tss.reserved     = 0;
+    gdt.tss.Limit1       = 104;
+    gdt.tss.Base1        = 0;
+    gdt.tss.Access       = 0b10001001;
+    gdt.tss.Limit2       = 0;
+    gdt.tss.Base2        = 0;
+    gdt.tss.Resvd        = 0;
+    //printf("gdt.tss offset: %u\n", offsetof(struct gdt, tss));
 
     // Set the pointer.
-    gdtr.limit = sizeof(struct gdt) - 1;
+    gdtr.limit = ((sizeof(struct gdt)*12) - 1);
     gdtr.base  = (uint64_t)&gdt;
 
     gdt_reload();
+}
+extern "C" void load_tss(int desc);
+void gdt_set_tss(uint64_t tss) {
+    gdt.tss.Limit1 = sizeof(tss_entry_t);
+    gdt.tss.Base1 = tss;
+    gdt.tss.Base2 = (tss >> 24);
+    gdt.tss.Access = 0x89;
+    gdt.tss.Limit2 = 0x40;
+    load_tss(offsetof(struct gdt, tss));
+}
+
+void tss_set_stack(uint64_t stack, tss_entry_t *tss) {
+    tss->rsp0_low = (uint32_t)stack;
+    tss->rsp0_high = (uint32_t)(stack >> 32);
 }
 
 void gdt_reload(void) {

@@ -4,7 +4,7 @@
 
 void sched_init();
 void start_sched();
-void create_task(int (*task)(), const char *name);
+void create_task(int (*task)(), const char *name, bool usermode=false);
 
 void sched_handl(idt_regs *regs);
 
