@@ -6,17 +6,9 @@
 
 typedef struct tss_entry {
     uint32_t reserved1;
-    uint32_t tss_field_lh(rsp0);
-    uint32_t tss_field_lh(rsp1);
-    uint32_t tss_field_lh(rsp2);
+    uint64_t rsp[3];
     uint32_t reserved2[2];
-    uint32_t tss_field_lh(ist1);
-    uint32_t tss_field_lh(ist2);
-    uint32_t tss_field_lh(ist3);
-    uint32_t tss_field_lh(ist4);
-    uint32_t tss_field_lh(ist5);
-    uint32_t tss_field_lh(ist6);
-    uint32_t tss_field_lh(ist7);
+    uint64_t ist[7];
     uint32_t reserved3[2];
     uint16_t reserver4;
     uint16_t iopb;

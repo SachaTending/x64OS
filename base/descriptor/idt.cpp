@@ -2,7 +2,7 @@
 #include <idt.hpp>
 #include <libc.h>
 
-typedef struct idt_entry // and again, fucking copied code.
+typedef struct idt_entry // and again copied code.
 {
 	// bytes 0 and 1
 	uint64_t OffsetLow  : 16;

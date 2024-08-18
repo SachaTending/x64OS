@@ -47,8 +47,8 @@ SECTIONS
     } :data
 
     .symtab : {
-        /*KEEP(*(.symtab));
-        KEEP(*(.dynsym));*/
+        KEEP(*(.symtab));
+        KEEP(*(.dynsym));
     }
     .dynsym : {
         KEEP(*(.dynsym));

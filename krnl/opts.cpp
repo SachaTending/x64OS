@@ -16,7 +16,7 @@ typedef struct {
     bool is_no_val;
 } opt_t;
 
-typedef frg::vector<opt_t, frg::stl_allocator> opt_array;
+typedef frg::vector<opt_t *, frg::stl_allocator> opt_array;
 
 opt_array opts_array = opt_array();
 
@@ -40,15 +40,14 @@ void parse_opts() {
         memcpy((void *)opt, cmdline_pntr, space_pos);
         find_chr('=', eq_pos,0, opt);
         bool is_no_val = eq_pos ? 0:1;
-        opt_t opt_struct = {
-            .opt_name = opt,
-            .opt_val = is_no_val?opt+eq_pos:0,
-            .is_no_val = is_no_val
-        };
+        opt_t *opt_struct = new opt_t;
+        opt_struct->opt_name = opt;
+        opt_struct->opt_val = is_no_val?opt+eq_pos:0;
+        opt_struct->is_no_val = is_no_val;
         if (is_no_val == false) {
             ((char *)opt)[eq_pos] = 0;
         }
-        opts_array.push_back(opt_struct);
+        opts_array.push(opt_struct);
         cmdline_pntr+=space_pos+1;
     }
 }
@@ -57,9 +56,9 @@ const char *get_val(const char *opt) {
     size_t arr_size = opts_array.size();
     size_t i = 0;
     while (i < arr_size) {
-        opt_t opt2 = opts_array[i];
-        if (opt2.is_no_val) continue;
-        if (!strcmp(opt2.opt_name, opt)) return opt2.opt_val;
+        opt_t *opt2 = opts_array[i];
+        if (opt2->is_no_val) continue;
+        if (!strcmp(opt2->opt_name, opt)) return opt2->opt_val;
         i++;
     }
     return NULL;
@@ -69,8 +68,8 @@ bool check_val(const char *opt) {
     size_t arr_size = opts_array.size();
     size_t i = 0;
     while (i < arr_size) {
-        opt_t opt2 = opts_array[i];
-        if (!strcmp(opt2.opt_name, opt)) return true;
+        opt_t *opt2 = opts_array[i];
+        if (!strcmp(opt2->opt_name, opt)) return true;
     }
     return false;
 }

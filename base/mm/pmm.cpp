@@ -99,7 +99,7 @@ void pmm_init(void) {
             case LIMINE_MEMMAP_ACPI_NVS:
             case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:
             case LIMINE_MEMMAP_KERNEL_AND_MODULES:
-                reserved_pages += DIV_ROUNDUP(entry->length, PAGE_SIZE);
+                reserved_pages += entry->length;
                 break;
         }
     }

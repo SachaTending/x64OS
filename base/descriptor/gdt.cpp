@@ -22,7 +22,7 @@ struct tss_descriptor {
     uint32_t reserved = 0;
 };
 
-typedef struct tes_desc2
+typedef struct tss_desc2
 {
 	uint64_t Limit1 : 16;
 	uint64_t Base1  : 24;
@@ -135,7 +135,7 @@ void GDT::Init() {
     //printf("gdt.tss offset: %u\n", offsetof(struct gdt, tss));
 
     // Set the pointer.
-    gdtr.limit = ((sizeof(struct gdt)*12) - 1);
+    gdtr.limit = (sizeof(gdt) - 1);
     gdtr.base  = (uint64_t)&gdt;
 
     gdt_reload();
@@ -147,12 +147,11 @@ void gdt_set_tss(uint64_t tss) {
     gdt.tss.Base2 = (tss >> 24);
     gdt.tss.Access = 0x89;
     gdt.tss.Limit2 = 0x40;
-    load_tss(offsetof(struct gdt, tss));
+    load_tss(sizeof(gdt_entry_t)*11);
 }
 
 void tss_set_stack(uint64_t stack, tss_entry_t *tss) {
-    tss->rsp0_low = (uint32_t)stack;
-    tss->rsp0_high = (uint32_t)(stack >> 32);
+    tss->rsp[0] = stack;
 }
 
 void gdt_reload(void) {

@@ -68,7 +68,7 @@ void unpack_initrd() {
                 if (!memcmp(archive->name, ".", 1)) {
                     memcpy(archive->name, archive->name+1, 99);
                 }
-                if ((!memcmp(archive->name, "/.", 2) or !memcmp(archive->name, "/..", 3))&& archive->typeflag == '5') {
+                if ((!memcmp(archive->name, "/.", 2) or !memcmp(archive->name, "/..", 3)) && archive->typeflag == '5') {
                     archive+=512;
                     continue;
                 }

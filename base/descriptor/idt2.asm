@@ -47,19 +47,18 @@ fetch_cr0:
 	xor rax, rax
 	pop  ax
 	mov  ds, ax
-	cmp  ax,  0x20     			  ; If the data segment is in user mode...
+	cmp  ax,  0x48     			  ; If the data segment is in user mode...
 	jne  .a2
 	swapgs                        ; Swap to the user's GS.
 .a2:
-	mov ax, 0x10
+	;mov ax, 0x10
 	pop  ax
-	mov ax, 0x10
 	mov  es, ax
 	pop  ax
-	mov ax, 0x10
+	;mov ax, 0x10
 	mov  fs, ax
 	pop  ax
-	mov ax, 0x10
+	;mov ax, 0x10
 	mov  gs, ax
 	add  rsp, 8    ; the space occupied by the cr2 register
 	;pop  rax

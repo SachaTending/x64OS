@@ -23,7 +23,6 @@ jump_to_usermode:
 	mov edx, 0x00180008
 	wrmsr
 
-	;mov ecx, (rel test_user_function) ; to be loaded into RIP
+	lea ecx, [rel test_user_function]
 	mov r11, 0x202 ; to be loaded into EFLAGS
-	swapgs
-	jmp test_user_function
+	o64 sysret ;use "o64 sysret" if you assemble with NASM

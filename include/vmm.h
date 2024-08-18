@@ -2,6 +2,7 @@
 #include <vec.h>
 #include <stdint.h>
 #include <spinlock.h>
+#include <stdbool.h>
 // Source code was taken from lyre os project, not wrote by me(TendingStream73)
 struct pagemap {
     spinlock_t lock;

@@ -37,7 +37,7 @@ void start_sched() {
 
 bool SCHED_STOP = false;
 spinlock_t sched_lock = SPINLOCK_INIT;
-
+#define STACK_SIZE 64*1024
 void create_task(int (*task)(), const char *name, bool usermode=false) {
     SCHED_STOP = true;
     spinlock_acquire(&sched_lock);
@@ -49,9 +49,10 @@ void create_task(int (*task)(), const char *name, bool usermode=false) {
     new_task->state = TASK_CREATE;
     new_task->regs.rip = (uint64_t)task_entry;
     new_task->regs.rax = (uint64_t)task;
-    new_task->regs.rsp = (uint64_t)malloc(64*1024)+64*1024;
+    new_task->regs.rsp = (uint64_t)malloc(STACK_SIZE)+STACK_SIZE;
     if (usermode == true) {
-        new_task->regs.cs = new_task->regs.gs = new_task->regs.ds = new_task->regs.fs = new_task->regs.ss = 0x20;
+        //new_task->regs.ds = new_task->regs.es = new_task->regs.ss = new_task->regs.fs = 10*8 | 3;
+        //new_task->regs.cs = 9*8 | 3;
     }
     task_t *task_p = root_task;
     do {

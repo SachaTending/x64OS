@@ -113,7 +113,7 @@ void vmm_setup() {
     for (uintptr_t addr=kstart;addr<kend;addr+=4096) {
         uint64_t phys = addr - kaddr.response->virtual_base + kaddr.response->physical_base;
         log.info("Mapping 0x%016lx\r", addr);
-        vmm_map_page(pg, addr, phys, PTE_WRITABLE | PTE_PRESENT | PTE_USER);
+        vmm_map_page(pg, addr, phys, PTE_WRITABLE | PTE_PRESENT);
     }
     printf("\n");
     int prog = 0;
@@ -126,8 +126,8 @@ void vmm_setup() {
         if (addr >= addr_end or addr >= addr_end-4096) prog = 100;
         if (oldpr != prog) log.info("Progress: %d%%\r", prog);
         //log.info("Progress: %d%% Address: 0x%016lx\r", prog, addr);
-        vmm_map_page(pg, addr, addr, PTE_PRESENT | PTE_WRITABLE | PTE_USER);
-        vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE | PTE_USER);
+        vmm_map_page(pg, addr, addr, PTE_PRESENT | PTE_WRITABLE);
+        vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE);
     }
     printf("\n");
     log.info("Switching pages...\n");
@@ -211,6 +211,7 @@ int krnl2_task() {
 
 extern "C" int test_user_function() {
     log.info("User mode, lol\n");
+    asm volatile ("iretq");
     for(;;);
 }
 
