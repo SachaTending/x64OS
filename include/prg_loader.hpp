@@ -23,3 +23,6 @@ typedef struct prg_loader
     load_t load;
     void *priv;
 } prg_loader_t;
+
+void register_loader(prg_loader_t *prg);
+LOADER_ERROR load_program(const char *path, pagemap *pgm);

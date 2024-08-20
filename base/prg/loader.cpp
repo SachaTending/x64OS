@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <frg/std_compat.hpp>
 #include <frg/vector.hpp>
 #include <new>
@@ -31,10 +32,10 @@ LOADER_ERROR load_program(const char *path, pagemap *pgm) {
         prg_loader_t *loader = prg_vector[i];
         if (loader->magic_len > BUF_LEN) continue; // Check if magic extends buffer length
         if (!memcmp((const void *)&buf, (const void *)loader->magic, loader->magic_len)) { // Check magic
-            file->seek(0);
+            file->seek(file, 0, SEEK_SET);
             LOADER_ERROR err = loader->check(loader, file); // Check if program valid
             if (err == LOADER_OK) {
-                file->seek(0);
+                file->seek(file, 0, SEEK_SET);
                 err = loader->load(loader, file, pgm);
                 return err;
             }

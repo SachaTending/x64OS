@@ -6,6 +6,7 @@
 #include <cpu.h>
 #include <ioapic.hpp>
 #include <sched.hpp>
+#include <prg_loader.hpp>
 
 static Logger log("Kernel");
 
@@ -218,6 +219,7 @@ extern "C" int test_user_function() {
 extern "C" int jump_to_usermode();
 
 void init_tss();
+void init_elf();
 void Kernel::Main() {
     if (krnl_called) return;
     krnl_called = true;
@@ -233,6 +235,7 @@ void Kernel::Main() {
     //log.info("SMP Not working.\n");
     init_pit();
     init_pic();
+    init_elf();
     //asm volatile ("int $32");
     log.info("Initializing TSS...\n");
     init_tss();
