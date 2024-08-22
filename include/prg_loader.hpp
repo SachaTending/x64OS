@@ -12,7 +12,7 @@ enum LOADER_ERROR {
 };
 
 typedef LOADER_ERROR (*check_t)(struct prg_loader *prg_loader, vfs_node_t *node);
-typedef LOADER_ERROR (*load_t)(struct prg_loader *prg_loader, vfs_node_t *node, pagemap *pgm);
+typedef LOADER_ERROR (*load_t)(struct prg_loader *prg_loader, vfs_node_t *node, pagemap *pgm, char **ld_path, uint64_t *entry);
 
 typedef struct prg_loader
 {
@@ -25,4 +25,4 @@ typedef struct prg_loader
 } prg_loader_t;
 
 void register_loader(prg_loader_t *prg);
-LOADER_ERROR load_program(const char *path, pagemap *pgm);
+LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64_t *entry);

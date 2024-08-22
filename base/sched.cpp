@@ -2,6 +2,7 @@
 #include <libc.h>
 #include <sched.hpp>
 #include <spinlock.h>
+#include <vmm.h>
 
 size_t next_pid;
 
@@ -24,6 +25,7 @@ void sched_init() {
     root_task->name = strdup("Dummy task");
     root_task->pid = next_pid;
     root_task->last_task = true;
+    root_task->pgm = krnl_page;
     next_pid++;
     void *stack = malloc(64*1024);
     root_task->regs.rsp = ((uint64_t)stack)+64*1024;
@@ -38,7 +40,7 @@ void start_sched() {
 bool SCHED_STOP = false;
 spinlock_t sched_lock = SPINLOCK_INIT;
 #define STACK_SIZE 64*1024
-void create_task(int (*task)(), const char *name, bool usermode=false) {
+void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *pgm=krnl_page) {
     SCHED_STOP = true;
     spinlock_acquire(&sched_lock);
     task_t *new_task = new task_t;
@@ -62,6 +64,7 @@ void create_task(int (*task)(), const char *name, bool usermode=false) {
     new_task->state = TASK_READY;
     task_p->next = new_task; 
     new_task->last_task = true;
+    new_task->pgm = pgm;
     spinlock_release(&sched_lock);
     SCHED_STOP = false;
 }
@@ -94,6 +97,7 @@ void sched_handl(idt_regs *regs) {
     current_task->state = TASK_READY;
     task_t *ntask = current_task->next;
     ntask->regs.cr2 = regs->cr2;
+    vmm_switch_to(ntask->pgm);
     if (ntask->regs.cs == 0) {
         ntask->regs.cs = regs->cs;
         ntask->regs.es = regs->es;

@@ -21,22 +21,32 @@ void register_loader(prg_loader_t *prg) {
 
 #define BUF_LEN 512
 
-LOADER_ERROR load_program(const char *path, pagemap *pgm) {
+LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64_t *entry) {
     vfs_node_t *file = vfs_get_node(path);
+    printf("get node: 0x%lx\n", file);
     if (file == NULL) {
         return LOADER_FILE_NOT_FOUND;
     }
-    char buf[BUF_LEN]; 
-    file->read(file, (void *)&buf, BUF_LEN); // Read program header
-    for (size_t i=0;i<(prg_vector.size()/sizeof(prg_loader_t *));i++) {
+    char *buf = new char[BUF_LEN]; 
+    if (buf == NULL) {
+        file->close(file);
+        return LOADER_ALLOC_FAIL;
+    }
+    printf("buf: 0x%lx\n", buf);
+    file->read(file, buf, BUF_LEN); // Read program header
+    printf("header read.\n");
+    size_t vector_size = prg_vector.size();
+    printf("vector size: %lu\n", vector_size);
+    for (size_t i=0;i<vector_size;i++) {
+        printf("loader %lu: %s\n", i, prg_vector[i]->loader_name);
         prg_loader_t *loader = prg_vector[i];
         if (loader->magic_len > BUF_LEN) continue; // Check if magic extends buffer length
-        if (!memcmp((const void *)&buf, (const void *)loader->magic, loader->magic_len)) { // Check magic
+        if (!memcmp(buf, (const void *)loader->magic, loader->magic_len)) { // Check magic
             file->seek(file, 0, SEEK_SET);
             LOADER_ERROR err = loader->check(loader, file); // Check if program valid
             if (err == LOADER_OK) {
                 file->seek(file, 0, SEEK_SET);
-                err = loader->load(loader, file, pgm);
+                err = loader->load(loader, file, pgm, ld_path, entry);
                 return err;
             }
         }

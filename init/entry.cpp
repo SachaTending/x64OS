@@ -111,10 +111,6 @@ extern "C" uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool alloca
 
 extern uint64_t kernel_start;
 extern uint64_t kernel_end;
-#define PTE_PRESENT (1ull << 0ull)
-#define PTE_WRITABLE (1ull << 1ull)
-extern "C" void vmm_switch_to(struct pagemap *pagemap);
-extern "C" void *pmm_alloc(size_t pages);
 
 //#define VMM_HIGHER_HALF 0xffff800000000000
 #define VMM_HIGHER_HALF hhdm2.response->offset

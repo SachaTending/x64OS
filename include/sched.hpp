@@ -1,10 +1,13 @@
 #pragma once
 #include <idt.hpp>
 #include <stddef.h>
+#include <vmm.h>
+
+extern pagemap *krnl_page;
 
 void sched_init();
 void start_sched();
-void create_task(int (*task)(), const char *name, bool usermode=false);
+void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *pgm=krnl_page);
 
 void sched_handl(idt_regs *regs);
 
@@ -22,6 +25,7 @@ typedef struct task {
     enum TASK_STATE state;
     size_t pid;
     bool last_task;
+    pagemap *pgm;
 } task_t;
 
 extern task_t *root_task, *current_task;

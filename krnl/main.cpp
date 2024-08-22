@@ -49,13 +49,6 @@ extern "C" uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool alloca
 
 extern uint64_t kernel_start;
 extern uint64_t kernel_end;
-#define PTE_PRESENT (1ull << 0ull)
-#define PTE_WRITABLE (1ull << 1ull)
-#define PTE_USER (1ull << 2ull)
-
-
-extern "C" void vmm_switch_to(struct pagemap *pagemap);
-extern "C" void *pmm_alloc(size_t pages);
 
 //#define VMM_HIGHER_HALF 0xffff800000000000
 #define VMM_HIGHER_HALF hhdm2.response->offset
@@ -175,6 +168,8 @@ void init_pic();
 
 #include <vfs.hpp>
 
+int exec(const char *path);
+
 vfs_fs_t *tmpfs_create_fs();
 void unpack_initrd();
 int krnl_task() {
@@ -202,6 +197,36 @@ int krnl_task() {
         delete[] buf;
         n->close(n);
     }
+    /*
+    log.info("Experiment number 2: ELF Loading.\n");
+    pagemap *pgm = new pagemap;
+    pgm->top_level = (uint64_t *)pmm_alloc(1);
+    pgm->lock = SPINLOCK_INIT;
+    log.info("pgm->top_level = 0x%lx\n", pgm->top_level);
+    if (pgm->top_level < VMM_HIGHER_HALF) {
+        uint64_t t = pgm->top_level;
+        t += VMM_HIGHER_HALF;
+        pgm->top_level = t;
+    }
+    for (int i=0;i<512;i++) {
+        //log.info("get_next_level(0x%lx, %i, true);\n", pgm->top_level, i);
+        get_next_level(pgm->top_level, i, true);
+    }
+    LOADER_ERROR ret2 = load_program("/init", pgm, NULL, NULL);
+    log.info("Return: ");
+    switch (ret2)
+    {
+        case LOADER_OK:
+            printf("LOADER_OK\n");
+            break;
+        
+        default:
+            printf("Unknown, %i\n", ret2);
+            break;
+    }
+    */
+    log.info("Starting /init...\n");
+    exec("/init");
     for(;;) asm volatile ("hlt");
 }
 
@@ -245,7 +270,7 @@ void Kernel::Main() {
     sched_init();
     create_task(krnl_task, "task2");
     create_task(krnl2_task, "task3(should exit)");
-    create_task(test_user_function, "usermode", true);
+    //create_task(test_user_function, "usermode", true);
     start_sched();
     for(;;);
 }

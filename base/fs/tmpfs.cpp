@@ -55,6 +55,7 @@ size_t tmpfs_seek(vfs_node_t *node, size_t seek_pos, int seek_type) {
     switch (seek_type)
     {
         case SEEK_SET:
+            while (seek_pos > node2->file->size) seek_pos--;
             break;
         case SEEK_END:
             while (seek_pos > node2->file->size) {
@@ -70,6 +71,7 @@ size_t tmpfs_seek(vfs_node_t *node, size_t seek_pos, int seek_type) {
             break;
     }
     node->seek_pos = seek_pos;
+    return seek_pos;
 }
 
 int tmpfs_write(vfs_node_t *node, void *data, size_t len) {
