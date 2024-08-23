@@ -49,13 +49,13 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
     }
     node->read(node, (void *)hdr, sizeof(Elf64_Ehdr)); // Read header
     node->seek(node, hdr->e_phoff, SEEK_SET);
-    printf("entry: 0x%lx\n", hdr->e_entry);
+    //printf("entry: 0x%lx\n", hdr->e_entry);
     Elf64_Phdr *phdr = new Elf64_Phdr;
     for (int i=0;i<hdr->e_phnum;i++) {
         memset(phdr, 0, sizeof(Elf64_Phdr));
         node->seek(node, hdr->e_phoff+(i*hdr->e_phentsize), SEEK_SET);
         node->read(node, phdr, sizeof(Elf64_Phdr));
-        printf("phdr %i: type: %lu, offset: %lu, vaddr: 0x%lx, paddr: 0x%lx, filesz: %u\n", i, phdr->p_type, phdr->p_offset, phdr->p_vaddr, phdr->p_paddr, phdr->p_filesz);
+        //printf("phdr %i: type: %lu, offset: %lu, vaddr: 0x%lx, paddr: 0x%lx, filesz: %u\n", i, phdr->p_type, phdr->p_offset, phdr->p_vaddr, phdr->p_paddr, phdr->p_filesz);
         int vmm_flags = PTE_PRESENT | PTE_USER; // Flags used for mapping pages
         size_t misalign = 0;
         size_t page_count = 0;
@@ -70,7 +70,7 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                 misalign = phdr->p_vaddr & (4096 - 1);
                 page_count = DIV_ROUNDUP(phdr->p_memsz + misalign, 4096);
                 phys = pmm_alloc(page_count);
-                printf("misalign: %lu, page_count: %lu, phys: 0x%lx\n", misalign, page_count, phys);
+                //printf("misalign: %lu, page_count: %lu, phys: 0x%lx\n", misalign, page_count, phys);
                 for (size_t i=0;i<page_count;i++) {
                     vmm_map_page(pgm, phdr->p_vaddr+(i*4096), ((uintptr_t)phys)+(i*4096), vmm_flags);
                 }

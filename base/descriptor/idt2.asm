@@ -3,6 +3,7 @@ default rel
 section .text
 extern idt_handler2
 global fetch_cr0
+global int_common
 
 fetch_cr0:
 	push rbp
@@ -35,7 +36,7 @@ fetch_cr0:
 	push ax
 	mov  ax,  ds
 	push ax
-	cmp  ax,  0x20     			  ; If the data segment is in user mode...
+	cmp  ax,  0x4b     			  ; If the data segment is in user mode...
 	jne  .a1
 	swapgs                        ; Swap to the kernel GS.
 .a1:
@@ -47,7 +48,7 @@ fetch_cr0:
 	xor rax, rax
 	pop  ax
 	mov  ds, ax
-	cmp  ax,  0x48     			  ; If the data segment is in user mode...
+	cmp  ax,  0x4b     			  ; If the data segment is in user mode...
 	jne  .a2
 	swapgs                        ; Swap to the user's GS.
 .a2:
@@ -87,7 +88,7 @@ int_common:
 	; does it load the address of certain things into a register. We then
 	; defer actually loading those until after DS was changed.
 	PUSH_STATE                             ; Push the state, except for the old ipl
-	mov   rax, 0x10             ; Use ring 0 segment for kernel mode use. We have backed the old values up
+	mov   ax, 0x30                         ; Use ring 0 segment for kernel mode use. We have backed the old values up
 	mov   ds,  ax
 	mov   es,  ax
 	mov   fs,  ax
@@ -124,6 +125,47 @@ int_%1:
 	push qword 0x%1       ; Push the interrupt number
 	jmp int_common        ; Jump to the common trap handler
 %endmacro
+global syscall_entry
+syscall_entry:
+	push qword 0
+	push qword 1024
+	push  rax
+	push  rbx
+	push  rcx
+	push  rdx
+	lea   rbx, [rsp + 32]                  ; Get the pointer to the value after rbx and rax on the stack
+	lea   rcx, [rsp + 48]                  ; Get the pointer to the RIP from the interrupt frame.
+	lea   rdx, [rsp + 56]                  ; Get the pointer to the CS from the interrupt frame.
+	; Note that LEA doesn't actually perform any memory accesses, all it
+	; does it load the address of certain things into a register. We then
+	; defer actually loading those until after DS was changed.
+	PUSH_STATE                             ; Push the state, except for the old ipl
+	mov   rax, 0x30                        ; Use ring 0 segment for kernel mode use. We have backed the old values up
+	mov   ds,  ax
+	mov   es,  ax
+	mov   fs,  ax
+	mov   gs,  ax
+	mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
+	mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.
+	mov   rdx, [rdx]                       ; Load CS, to determine the previous mode when entering a hardware interrupt
+	push  rcx                              ; Enter a stack frame so that stack printing doesn't skip over anything
+	push  rbp
+	mov   rbp, rsp
+	cld                                    ; Clear direction flag, will be restored by iretq
+	mov   rdi, rsp                         ; Retrieve the idt_regs to call the trap handler
+	push  rdi							   ; Push pointer to registers
+	call  idt_handler2                     ; And call idt_handler!!
+	pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
+	mov   rsp, rax                         ; Use the new idt_regs instance as what to pull:
+	pop   rbp                              ; Leave the stack frame
+	pop   rcx                              ; Skip over the RIP duplicate that we pushed
+	POP_STATE                              ; Pop the state
+	pop   rdx                              ; Pop the RDX register
+	pop   rcx                              ; Pop the RCX register
+	pop   rbx                              ; Pop the RBX register
+	pop   rax                              ; Pop the RAX register
+	add   rsp, 16                          ; Pop the interrupt number and the error code
+	o64 sysret
 
 %include "base/descriptor/intlist.asm"
 

@@ -3,6 +3,7 @@
 #include <sched.hpp>
 #include <spinlock.h>
 #include <vmm.h>
+#include <krnl.hpp>
 
 size_t next_pid;
 
@@ -11,8 +12,10 @@ task_t *root_task, *current_task;
 bool SCHED_STARTED = false;
 bool SCHED_READY = false;
 
-extern "C" void task_entry(void);
-
+extern "C" {
+    void task_entry(void);
+    void task_user_mode_entry(void);
+}
 void dummy_task() {
     for (;;) asm volatile ("hlt"); // dummy task, does nothing.
 }
@@ -51,10 +54,17 @@ void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *
     new_task->state = TASK_CREATE;
     new_task->regs.rip = (uint64_t)task_entry;
     new_task->regs.rax = (uint64_t)task;
-    new_task->regs.rsp = (uint64_t)malloc(STACK_SIZE)+STACK_SIZE;
+    //new_task->regs.rflags = 0x202;
     if (usermode == true) {
-        //new_task->regs.ds = new_task->regs.es = new_task->regs.ss = new_task->regs.fs = 10*8 | 3;
-        //new_task->regs.cs = 9*8 | 3;
+        new_task->regs.rip = (uint64_t)task_user_mode_entry;
+        new_task->regs.rcx = (uint64_t)task;
+        //new_task->regs.ds = new_task->regs.es = new_task->regs.ss = new_task->regs.fs = 10*8;
+        //new_task->regs.cs = 9*8;
+        uint64_t rsp = (uint64_t)pmm_alloc(STACK_SIZE/4096);
+        vmm_map_range(pgm, rsp, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
+        new_task->regs.rsp = (rsp+STACK_SIZE);
+    } else {
+        new_task->regs.rsp = (uint64_t)malloc(STACK_SIZE)+STACK_SIZE;
     }
     task_t *task_p = root_task;
     do {
@@ -106,7 +116,9 @@ void sched_handl(idt_regs *regs) {
         ntask->regs.ds = regs->ds;
         ntask->regs.ss = regs->ss;
     }
+    ntask->regs.gs = regs->gs;
     load_regs(ntask, regs);
     ntask->state = TASK_RUNNING;
+    regs->rflags |= (1 << 9);
     current_task = ntask;
 }

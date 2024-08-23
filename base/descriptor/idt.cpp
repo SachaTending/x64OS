@@ -39,8 +39,14 @@ idt_handl idt_handls[256];
 void lapic_eoi(void);
 void eoi(uint8_t irq);
 #define BIT(b) (1 << b)
-#define errcode_13_shift (1 >> regs->ErrorCode)
+#define errcode_13_shift (regs->ErrorCode >> 1)
+void syscall_c_entry(idt_regs *);
 extern "C" void idt_handler2(idt_regs *regs) {
+    if (regs->IntNumber == 1024) {
+        // Special interrupt, syscall
+        syscall_c_entry(regs);
+        return;
+    }
     if (regs->IntNumber < 32) {
         printf("OH NO: INT_%u ERR=0x%04x\n", regs->IntNumber, regs->ErrorCode);
         if (regs->IntNumber == 13) {
@@ -48,19 +54,17 @@ extern "C" void idt_handler2(idt_regs *regs) {
             if (regs->ErrorCode & BIT(0)) {
                 printf("External ");
             }
-            if (errcode_13_shift & 0b01) {
-                if (errcode_13_shift & 0b10) {
-                    if (errcode_13_shift & 0b11) {
-                        printf("IDT(0b11) ");
-                    } else {
-                        printf("LDT");
-                    }
-                } else {
-                    printf("IDT ");
-                }
+            uint8_t erc = errcode_13_shift & 0b11;
+            if (erc == 3) {
+                printf("IDT(0b11)");
+            } else if (erc == 2) {
+                printf("LDT");
+            } else if (erc == 1) {
+                printf("IDT");
             } else {
-                printf("GDT ");
+                printf("GDT");
             }
+            printf(" erc=%u\n", erc);
         }
         printf("\n");
         printf("Registers dump:\n");

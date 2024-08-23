@@ -25,3 +25,5 @@ void vmm_switch_to(struct pagemap *pagemap);
 #ifdef __cplusplus
 }
 #endif
+
+void vmm_map_range(pagemap *pgm, uint64_t start, size_t count, uint64_t flags=PTE_PRESENT);

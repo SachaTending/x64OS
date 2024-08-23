@@ -14,7 +14,7 @@ _start:
     syscall                            ; invoke operating system to "exit"
 extern _start3
 _start2:
-    jmp _start3
+    call _start3
 .1:
     jmp .1
 message:
