@@ -64,7 +64,7 @@ extern "C" void idt_handler2(idt_regs *regs) {
             } else {
                 printf("GDT");
             }
-            printf(" erc=%u\n", erc);
+            printf(" erc=%u segnment=%u\n", erc, errcode_13_shift >> 2);
         }
         printf("\n");
         printf("Registers dump:\n");
@@ -92,6 +92,12 @@ void idt_set_desc(uint64_t addr, int index, int gtype=0xE) {
     e->Present = true;
 }
 
+void idt_set_global_ist(uint8_t ist) {
+    for (int i=0;i<256;i++) {
+        if (idte[i].IST != 0) continue;
+        idte[i].IST = ist;
+    }
+}
 
 void idt_set_int(uint64_t vec, idt_handl handl) {
     idt_handls[vec] = handl;

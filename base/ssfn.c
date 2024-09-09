@@ -90,13 +90,13 @@ end:
         if (fb2) {
             //__builtin_memcpy((void *)ssfn_dst.ptr, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             //__builtin_memcpy((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
-            __builtin_memcpy((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
+            __builtin_memmove((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             __builtin_memcpy(ssfn_dst.ptr, fb2, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             //memset(ssfn_dst.ptr, 0, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             //fast_memcpy(ssfn_dst.ptr, (void *)fb2, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
         }
         else {
-            __builtin_memcpy((void *)ssfn_dst.ptr, (void *)(uint64_t)(ssfn_dst.ptr+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
+            __builtin_memmove((void *)ssfn_dst.ptr, (void *)(uint64_t)(ssfn_dst.ptr+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
         }
     }
 }

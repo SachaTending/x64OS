@@ -93,6 +93,7 @@ int_common:
 	mov   es,  ax
 	mov   fs,  ax
 	mov   gs,  ax
+	mov   ss,  ax
 	mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
 	mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.
 	mov   rdx, [rdx]                       ; Load CS, to determine the previous mode when entering a hardware interrupt
