@@ -49,9 +49,9 @@ void ssfn_ptc(uint32_t c) {
 #define SSFN_RENDER(c) ssfn_ptc(c)
 
 void fast_memcpy(void *dst, const void *src, size_t n) {
-    uint8_t *p1 = (uint8_t *)dst;
-    uint8_t *p2 = (uint8_t *)src;
-    for (size_t i=0;i<n;i++) {
+    uint64_t *p1 = (uint64_t *)dst;
+    uint64_t *p2 = (uint64_t *)src;
+    for (size_t i=0;i<n/8;i++) {
         if (p2[i] != 0) p1[i] = p2[i];
     }
 }
@@ -89,14 +89,14 @@ end:
         ssfn_dst.x = 0;
         if (fb2) {
             //__builtin_memcpy((void *)ssfn_dst.ptr, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
-            //__builtin_memcpy((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
-            __builtin_memmove((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
+            __builtin_memcpy((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
+            //__builtin_memmove((void *)fb2, (void *)(uint64_t)(fb2+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             __builtin_memcpy(ssfn_dst.ptr, fb2, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             //memset(ssfn_dst.ptr, 0, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
             //fast_memcpy(ssfn_dst.ptr, (void *)fb2, ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
         }
         else {
-            __builtin_memmove((void *)ssfn_dst.ptr, (void *)(uint64_t)(ssfn_dst.ptr+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
+            fast_memcpy((void *)ssfn_dst.ptr, (void *)(uint64_t)(ssfn_dst.ptr+(ssfn_dst.p*ssfn_src->width)), ssfn_dst.p*(ssfn_dst.w-ssfn_src->width));
         }
     }
 }
