@@ -8,13 +8,14 @@
 static Logger log("Syscall handler");
 
 void sys_print(const char *txt, uint64_t len) {
+    printf("from user mode program: ");
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
 }
 
 void int80(idt_regs *regs) {
     switch (regs->rax)
     {
-        case 2:
+        case 1:
             if (regs->rdi == 1) { 
                 sys_print((const char *)regs->rsi, regs->rdx);
             }
@@ -29,6 +30,7 @@ void int80(idt_regs *regs) {
 
 void syscall_c_entry(idt_regs *regs) {
     printf("SYSCALL: %u\n", regs->rax);
+    int80(regs);
 }
 
 extern "C" void syscall_entry(void);

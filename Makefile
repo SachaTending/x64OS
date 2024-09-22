@@ -19,7 +19,7 @@ override CFLAGS += \
     -mno-sse2 \
     -mno-red-zone -c \
 	-I include -g \
-    -D__BUILD_USER=\"$(USER)\" -D__BUILD_HOST=\"$(HOST)\"
+    -D__BUILD_USER=\"$(USER)\" -D__BUILD_HOST=\"$(HOST)\" -DE9_HACK
  
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
@@ -90,3 +90,6 @@ run_uefi: image.iso
 
 clean:
 	@rm $(COMP_OBJ) bin/kernel.elf $(HEADER_DEPS) -f
+
+bochs: image.iso
+	@bochs -q -f bochs.cfg

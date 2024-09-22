@@ -65,6 +65,8 @@ SECTIONS
     /* above this. */
     .bss : {
         *(.bss .bss.*)
+    } :data
+    .common : {
         *(COMMON)
     } :data
     kernel_end = .;

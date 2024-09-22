@@ -24,6 +24,7 @@ typedef struct idt_entry // and again copied code.
 
 idt_entry_t idte[256];
 extern "C" uint64_t fetch_cr0(void);
+extern "C" uint64_t fetch_cr3(void);
 void idt_regs_dump(idt_regs *regs) {
     printf("R08: 0x%016lx R09: 0x%016lx R10: 0x%016lx R11: 0x%016lx R12: 0x%016lx R13: 0x%016lx R14: 0x%016lx R15: 0x%016lx\n", regs->r8, regs->r9, regs->r10, regs->r11, regs->r12, regs->r13, regs->r14, regs->r15);
     printf("RIP: 0x%016lx RSP: 0x%016lx RBP: 0x%016lx RAX: 0x%016lx\n", regs->rip, regs->rsp, regs->rbp, regs->rax);
@@ -31,7 +32,7 @@ void idt_regs_dump(idt_regs *regs) {
     printf("RSI: 0x%016lx RFLAGS: 0x%016lx\n", regs->rsi, regs->rflags);
     printf("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx FS: 0x%lx GS: 0x%lx\n", regs->cs, regs->ss, regs->ds, regs->es, regs->fs, regs->gs);
     printf("SFRA: 0x%lx CR2: 0x%lx\n", regs->sfra, regs->cr2);
-    printf("CR0: 0x%lx\n", fetch_cr0());
+    printf("CR0: 0x%lx CR3: 0x%016lx\n", fetch_cr0(), fetch_cr3());
 }
 void stacktrace(uintptr_t *s);
 extern "C" uint64_t int_lst[256];

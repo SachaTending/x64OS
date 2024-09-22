@@ -2,6 +2,9 @@
 #include <libc.h>
 #include <logging.hpp>
 #include <limine.h>
+#include <vmm.h>
+#include <sched.hpp>
+#include <krnl.hpp>
 
 static Logger log("Initrd unpacker");
 
@@ -61,6 +64,8 @@ void unpack_initrd() {
         PANIC("No ramdisks found!\n");
     }
     for (int i=0;i<modules.response->module_count;i++) {
+        // BUGFIX: Map module to pagemap
+        vmm_map_range(krnl_page, (uint64_t)modules.response->modules[i]->address-VMM_HIGHER_HALF, modules.response->modules[i]->size, PTE_PRESENT);
         ustar_header_t *archive = (ustar_header_t *)modules.response->modules[i]->address;
         if (!memcmp(archive->magic, "ustar", 5)) {
             while (!memcmp(archive->magic, "ustar", 5)) {

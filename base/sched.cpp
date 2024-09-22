@@ -56,10 +56,10 @@ void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *
     new_task->regs.rax = (uint64_t)task;
     //new_task->regs.rflags = 0x202;
     if (usermode == true) {
-        new_task->regs.rip = (uint64_t)task_user_mode_entry;
+        new_task->regs.rip = (uint64_t)task;
         new_task->regs.rcx = (uint64_t)task;
-        new_task->regs.ds = new_task->regs.es = new_task->regs.ss = new_task->regs.fs = 10*8;
-        //new_task->regs.cs = 9*8;
+        //new_task->regs.ds = new_task->regs.es = new_task->regs.ss = new_task->regs.fs = (10*8) | 3;
+        //new_task->regs.cs = (9*8) | 3;
         uint64_t rsp = (uint64_t)pmm_alloc(STACK_SIZE/4096);
         vmm_map_range(pgm, rsp, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
         new_task->regs.rsp = (rsp+STACK_SIZE);

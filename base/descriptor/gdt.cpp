@@ -137,7 +137,8 @@ void GDT::Init() {
     // Set the pointer.
     gdtr.limit = (sizeof(gdt) - 1);
     gdtr.base  = (uint64_t)&gdt;
-
+    gdt.descriptors[7] = gdt.descriptors[9];
+    gdt.descriptors[8] = gdt.descriptors[10];
     gdt_reload();
 }
 extern "C" void load_tss(int desc);

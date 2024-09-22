@@ -3,6 +3,7 @@ default rel
 section .text
 extern idt_handler2
 global fetch_cr0
+global fetch_cr3
 global int_common
 
 fetch_cr0:
@@ -12,6 +13,15 @@ fetch_cr0:
 	mov rsp, rbp
 	pop rbp
 	ret
+
+fetch_cr3:
+	push rbp
+	mov rbp, rsp
+	mov rax, cr3
+	mov rsp, rbp
+	pop rbp
+	ret
+
 
 %macro PUSH_STATE 0
 	push r8
@@ -92,7 +102,6 @@ int_common:
 	mov   ds,  ax
 	mov   es,  ax
 	mov   fs,  ax
-	mov   gs,  ax
 	mov   ss,  ax
 	mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
 	mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.

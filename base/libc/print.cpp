@@ -190,7 +190,12 @@ int etc_lookup_fg[] = {
 #undef fill_37_90_gap
 
 void putchar(char c) {
+    #ifdef E9_HACK
+    outb(0xe9, c);
+    #endif
+    #ifndef E9_HACK
     outb(0x3f8, c);
+    #endif
     if (c == '\e') {
         escStart = true;
     } else if (escStart && etype == NO_ESC) {

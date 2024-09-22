@@ -4,13 +4,13 @@ load_gdt: ; did you know that this asm code taken from boron os? No? Compare thi
 	lgdt [rax]
 	
 	; update the code segment
-	push 0x08           ; code segment
+	push 0x28           ; code segment
 	lea rax, [rel .a]   ; jump address
 	push rax
 	retfq               ; return far - will go to .a now
 .a:
 	; update the segments
-	mov ax, 0x10
+	mov ax, 0x30
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
