@@ -112,7 +112,8 @@ void vmm_setup() {
     printf("\n");
     int prog = 0;
     int oldpr = 0;
-    uint64_t addr_end = 0x100000000;
+    //uint64_t addr_end = 0x100000000;
+    uint64_t addr_end=0xfffffffb;
     log.info("Mapping memory...\n");
     for (uintptr_t addr = 0x0; addr < addr_end; addr += 4096) {
         oldpr = prog;

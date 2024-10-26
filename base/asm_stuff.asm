@@ -12,16 +12,16 @@ sse_enable:
 global jump_to_usermode
 extern test_user_function
 jump_to_usermode:
-	mov rcx, 0xc0000082
-	wrmsr
-	mov rcx, 0xc0000080
-	rdmsr
-	or eax, 1
-	wrmsr
-	mov rcx, 0xc0000081
-	rdmsr
-	mov edx, 0x00180008
-	wrmsr
+	;mov rcx, 0xc0000082
+	;wrmsr
+	;mov rcx, 0xc0000080
+	;rdmsr
+	;or eax, 1
+	;wrmsr
+	;mov rcx, 0xc0000081
+	;rdmsr
+	;mov edx, 0x00180008
+	;wrmsr
 
 	lea ecx, [rel test_user_function]
 	mov r11, 0x202 ; to be loaded into EFLAGS

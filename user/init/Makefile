@@ -10,4 +10,7 @@ OBJ = entry.o entry2.o
 
 init: $(OBJ)
 	@echo "  [  LD] init"
-	@ld -o init $(OBJ)
+	@gcc -o init $(OBJ) -nostdlib -static -lc
+
+pack: init
+	tar cv ./init > ../../iso_root/test.tar

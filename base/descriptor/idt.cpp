@@ -42,6 +42,30 @@ void eoi(uint8_t irq);
 #define BIT(b) (1 << b)
 #define errcode_13_shift (regs->ErrorCode >> 1)
 void syscall_c_entry(idt_regs *);
+
+void on_page_fault(idt_regs *regs) {
+    printf("Got Page fault, flags: ");
+    #define is_bit_set(bit) (regs->ErrorCode & BIT(bit))
+    if (is_bit_set(0)) {
+        printf("Present ");
+    } if (is_bit_set(1)) {
+        printf("Write ");
+    } if (is_bit_set(2)) {
+        printf("User ");
+    } if (is_bit_set(3)) {
+        printf("Reserved write ");
+    } if (is_bit_set(4)) {
+        printf("Instruction fetch ");
+    } if (is_bit_set(5)) {
+        printf("Protection key");
+    } if (is_bit_set(6)) {
+        printf("Shadow stack ");
+    } if (is_bit_set(15)) {
+        printf("Software guard exception ");
+    }
+    printf("\n");
+}
+
 extern "C" void idt_handler2(idt_regs *regs) {
     if (regs->IntNumber == 1024) {
         // Special interrupt, syscall
@@ -66,6 +90,8 @@ extern "C" void idt_handler2(idt_regs *regs) {
                 printf("GDT");
             }
             printf(" erc=%u segnment=%u\n", erc, errcode_13_shift >> 2);
+        } else if (regs->IntNumber == 14) {
+            on_page_fault(regs);
         }
         printf("\n");
         printf("Registers dump:\n");
@@ -88,7 +114,7 @@ void idt_set_desc(uint64_t addr, int index, int gtype=0xE) {
     e->OffsetHigh = addr >> 16;
     e->SegmentSel = 0x28;
     e->IST = 0;
-    e->DPL = 0;
+    e->DPL = 3;
     e->GateType = gtype;
     e->Present = true;
 }

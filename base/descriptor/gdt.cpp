@@ -109,6 +109,11 @@ void GDT::Init() {
     gdt.descriptors[7] = (struct gdt_descriptor){0};
     gdt.descriptors[8] = (struct gdt_descriptor){0};
 
+    #define WORKAROUND_FOR_INT_13_BUG
+    #ifdef WORKAROUND_FOR_INT_13_BUG
+    // Workaround bugfix of int_13 with segment=2
+    memcpy(&gdt.descriptors[2], &gdt.descriptors[6], sizeof(gdt_descriptor));
+    #endif
     // User code 64.
     gdt.descriptors[9].limit       = 0;
     gdt.descriptors[9].base_low16  = 0;

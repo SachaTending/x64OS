@@ -6,12 +6,12 @@ task_user_mode_entry:
 	o64 sysret ;use "o64 sysret" if you assemble with NASM
 
 task_entry:
-    mov rdi, 0x30
-    mov ds, rdi
-	mov es, rdi
-	mov fs, rdi
-	mov gs, rdi
-	mov ss, rdi
+    ;mov rdi, 0x30
+    ;mov ds, rdi
+	;mov es, rdi
+	;mov fs, rdi
+	;mov gs, rdi
+	;mov ss, rdi
     sti
     call rax
     mov edi, eax

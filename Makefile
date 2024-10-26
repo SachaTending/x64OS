@@ -19,7 +19,7 @@ override CFLAGS += \
     -mno-sse2 \
     -mno-red-zone -c \
 	-I include -g \
-    -D__BUILD_USER=\"$(USER)\" -D__BUILD_HOST=\"$(HOST)\" -DE9_HACK
+    -D__BUILD_USER=\"$(USER)\" -D__BUILD_HOST=\"$(HOST)\"
  
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
@@ -77,10 +77,10 @@ image.iso: bin/kernel.elf
         -no-emul-boot -boot-load-size 4 -boot-info-table \
         --efi-boot limine-uefi-cd.bin \
         -efi-boot-part --efi-boot-image --protective-msdos-label \
-        iso_root -o image.iso
+        iso_root -o image.iso -volid "x64OS Bootable"
 .PHONY: image.iso bin/kernel.elf
 run: image.iso
-	@qemu-system-x86_64 -cdrom image.iso -serial stdio -smp cores=2 $(KVM)
+	@qemu-system-x86_64 -cdrom image.iso -serial stdio $(KVM)
 
 rung: image.iso
 	@qemu-system-x86_64 -cdrom image.iso -serial stdio -s -S $(KVM) -m 256m
