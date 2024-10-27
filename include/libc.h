@@ -14,6 +14,7 @@ void * malloc(size_t size);
 void free(void *mem);
 void *realloc(void *ptr, size_t l);
 void *pmm_alloc(size_t pages);
+void pmm_free(void *addr, size_t pages);
 
 size_t strlen(const char *str);
 void strcpy(char *dst, const char *src);

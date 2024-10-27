@@ -197,7 +197,7 @@ void *pmm_alloc_nozero(size_t pages) {
     return ret;
 }
 
-void pmm_free(void *addr, size_t pages) {
+extern "C" void pmm_free(void *addr, size_t pages) {
     spinlock_acquire(&lock);
 
     size_t page = (uint64_t)addr / PAGE_SIZE;

@@ -4,6 +4,8 @@
 #include <printf/printf.h>
 #include <msr.h>
 #include <libc.h>
+#include <sys/syscall.h>
+#include <sched.hpp>
 
 static Logger log("Syscall handler");
 
@@ -21,7 +23,10 @@ void int80(idt_regs *regs) {
                 sys_print((const char *)regs->rsi, regs->rdx);
             }
             break;
-        
+        case 39:
+            regs->rax = getpid();
+        case 60: // exit
+            sched_kill_pid(getpid());
         default:
             log.debug("unknown syscall: %u\n", regs->rax);
             break;

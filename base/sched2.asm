@@ -15,7 +15,7 @@ task_entry:
     sti
     call rax
     mov edi, eax
-    mov eax, 1
+    mov eax, 60
     int 0x80
 halt:
     jmp halt

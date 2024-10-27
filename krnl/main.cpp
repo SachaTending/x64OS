@@ -246,6 +246,7 @@ extern "C" int jump_to_usermode();
 
 void init_tss();
 void init_elf();
+void init_ps2();
 void Kernel::Main() {
     if (krnl_called) return;
     krnl_called = true;
@@ -262,6 +263,7 @@ void Kernel::Main() {
     init_pit();
     init_pic();
     init_elf();
+    init_ps2();
     //asm volatile ("int $32");
     log.info("Initializing TSS...\n");
     init_tss();

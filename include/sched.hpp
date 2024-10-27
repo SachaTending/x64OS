@@ -7,7 +7,11 @@ extern pagemap *krnl_page;
 
 void sched_init();
 void start_sched();
+void stop_sched();
 void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *pgm=krnl_page);
+
+int getpid();
+void sched_kill_pid(int pid);
 
 void sched_handl(idt_regs *regs);
 
@@ -26,6 +30,7 @@ typedef struct task {
     size_t pid;
     bool last_task;
     pagemap *pgm;
+    void *stack_addr;
 } task_t;
 
 extern task_t *root_task, *current_task;

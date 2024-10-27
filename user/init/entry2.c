@@ -4,12 +4,7 @@
 #include <sys/types.h>
 extern long int syscall2 (long int __sysno, ...) __THROW;
 void print_syscall(const char *txt, size_t len) {
-    int    syscall_no  = 1;
-    int    arg1        = 1;
-    const char*  arg2 = txt;
-    size_t arg3        = len;
-    //asm volatile ("int $0x80" : : "rax" (syscall_no), "%rdi" (arg1), "%rsi" (arg2), "rdx" (arg3) : "memory");
-    syscall2(syscall_no, arg1, arg2, arg3);
+    syscall2(1, 1, txt, len);
 }
 
 const char *txt = "Hello, C World!\n";
