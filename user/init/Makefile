@@ -13,4 +13,4 @@ init: $(OBJ)
 	@gcc -o init $(OBJ) -nostdlib -static -lc
 
 pack: init
-	tar cv ./init > ../../iso_root/test.tar
+	tar cv . > ../../iso_root/test.tar

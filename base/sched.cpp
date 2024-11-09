@@ -43,14 +43,21 @@ void sched_init() {
     root_task->state = TASK_READY;
 }
 
+bool SCHED_STOP = false;
+
 void start_sched() {
     SCHED_READY = true;
     SCHED_STARTED = true;
+    //SCHED_STOP = false;
     //log.debug("Scheduler started.\n");
 }
 
+void resume_sched() {
+    SCHED_STOP = false;
+}
+
 void stop_sched() {
-    SCHED_STARTED = false;
+    SCHED_STOP = false;
 }
 
 task_t *get_process_by_pid(int pid) {
@@ -77,9 +84,9 @@ void sched_kill_pid(int pid) {
     start_sched();
 }
 
-bool SCHED_STOP = false;
 spinlock_t sched_lock = SPINLOCK_INIT;
-#define STACK_SIZE 64*1024
+#define STACK_SIZE 128*1024
+
 void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *pgm=krnl_page) {
     SCHED_STOP = true;
     spinlock_acquire(&sched_lock);
@@ -92,6 +99,7 @@ void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *
     new_task->regs.rip = (uint64_t)task_entry;
     new_task->regs.rax = (uint64_t)task;
     //new_task->regs.rflags = 0x202;
+    new_task->regs.rflags |= (1 << 9);
     if (usermode == true) {
         new_task->regs.rip = (uint64_t)task;
         //new_task->regs.rcx = (uint64_t)task;
@@ -106,6 +114,7 @@ void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *
         new_task->stack_addr = ((void *)pmm_alloc(STACK_SIZE/4096));
         new_task->regs.rsp = ((uint64_t)new_task->stack_addr)+STACK_SIZE+VMM_HIGHER_HALF;
     }
+    memset(new_task->stack_addr, 0, STACK_SIZE);
     task_t *task_p = root_task;
     do {
         task_p = task_p->next;
@@ -168,6 +177,7 @@ void sched_handl(idt_regs *regs) {
             root_task->regs.ds = regs->ds;
             root_task->regs.ss = regs->ss;
         }
+        root_task->regs.rflags |= (1 << 9);
         SCHED_STARTED = true;
     }
     else save_regs(regs);
@@ -190,10 +200,10 @@ void sched_handl(idt_regs *regs) {
         ntask->regs.ds = regs->ds;
         ntask->regs.ss = regs->ss;
     }
-    ntask->regs.gs = regs->gs;
+    //ntask->regs.gs = regs->gs;
     load_regs(ntask, regs);
     ntask->state = TASK_RUNNING;
-    regs->rflags |= (1 << 9);
+    //regs->rflags |= (1 << 9);
     current_task = ntask;
     //log.debug("Switched to task %s, pid: %d, RIP: 0x%lx\n", current_task->name, current_task->pid, current_task->regs.rip);
 }

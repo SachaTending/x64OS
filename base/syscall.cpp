@@ -13,11 +13,17 @@ void sys_print(const char *txt, uint64_t len) {
     printf("from user mode program: ");
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
 }
-
+uint8_t ps2_recv_dev();
 void int80(idt_regs *regs) {
-    printf("SYSCALL: %u\n", regs->rax);
+    //printf("SYSCALL: %u\n", regs->rax);
     switch (regs->rax)
     {
+        case 2:
+            // TEMP SYSCALL: Read PS/2
+            //asm volatile ("sti");
+            regs->rax = ps2_recv_dev();
+            //asm volatile ("cld");
+            break;
         case 1:
             if (regs->rdi == 1) { 
                 sys_print((const char *)regs->rsi, regs->rdx);
@@ -25,13 +31,14 @@ void int80(idt_regs *regs) {
             break;
         case 39:
             regs->rax = getpid();
+            break;
         case 60: // exit
             sched_kill_pid(getpid());
+            break;
         default:
             log.debug("unknown syscall: %u\n", regs->rax);
             break;
     }
-
 }
 
 void syscall_c_entry(idt_regs *regs) {
@@ -45,10 +52,10 @@ __attribute__((constructor)) void init_syscall() {
     //wrmsr(0x174, 28);
     //wrmsr(0x176, (uint64_t)syscall_entry);
     // Enable syscall extensions
-    //wrmsr(0xc0000080, rdmsr(0xc0000080) | 1);
-    //wrmsr(0xc0000081, ((0x48-16) >> 47  ));
-    //wrmsr(0xC0000082, (uint64_t)syscall_entry); DON'T USE SYSCALL!!! ONLY USE int 0x80 BECAUSE SYSCALL TRIGGERS #GD
-  //  wrmsr(0xC0000100, 0x30);
-    //wrmsr(0xC0000101, 0x48 | 3);
-    //wrmsr(0xC0000102, 0x30);
+    wrmsr(0xc0000080, rdmsr(0xc0000080) | 1);
+    wrmsr(0xc0000081, (((6*8)-16) >> 48  ));
+    wrmsr(0xC0000082, (uint64_t)syscall_entry);
+    wrmsr(0xC0000100, 0x30);
+    wrmsr(0xC0000101, 0x48 | 3);
+    wrmsr(0xC0000102, 0x30);
 }

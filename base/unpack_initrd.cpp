@@ -67,16 +67,18 @@ void unpack_initrd() {
         // BUGFIX: Map module to pagemap
         vmm_map_range(krnl_page, (uint64_t)modules.response->modules[i]->address-VMM_HIGHER_HALF, modules.response->modules[i]->size, PTE_PRESENT);
         ustar_header_t *archive = (ustar_header_t *)modules.response->modules[i]->address;
+        uint64_t ptr = (uint64_t)modules.response->modules[i]->address;
         if (!memcmp(archive->magic, "ustar", 5)) {
             while (!memcmp(archive->magic, "ustar", 5)) {
                 int size = oct2bin((unsigned char *)archive->size, 11);
                 if (!memcmp(archive->name, ".", 1)) {
                     memcpy(archive->name, archive->name+1, 99);
                 }
-                if ((!memcmp(archive->name, "/.", 2) or !memcmp(archive->name, "/..", 3)) && archive->typeflag == '5') {
-                    archive+=512;
-                    continue;
-                }
+                //if (((!memcmp(archive->name, "/.", 2) or !memcmp(archive->name, "/..", 3)) or !memcmp(archive->name, "/", 2)) && archive->typeflag == '5') {
+                //    archive+=512;
+                //    continue;
+                //}
+                if (archive->typeflag == '5') size = 0;
                 if(vfs_get_node(archive->name) == NULL) {
                     vfs_node_t *n = NULL;
                     switch (archive->typeflag)
@@ -101,6 +103,7 @@ void unpack_initrd() {
                             } else {
                                 log.info("Failed to create directory %s: failed to create directory.\n", archive->name);
                             }
+                            size = 0;
                             break;
                         default:
                             log.info("Failed to unpack %s: unknown type, %s\n", archive->name, archive->typeflag);
@@ -108,7 +111,8 @@ void unpack_initrd() {
                     }
 
                 }
-                archive += (((size + 511) / 512) + 1) * 512;
+                ptr += (((size + 511) / sizeof(ustar_header_t)) + 1) * sizeof(ustar_header_t);
+                archive = (ustar_header_t *)ptr;
             }
         }
     }

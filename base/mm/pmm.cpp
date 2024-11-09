@@ -3,6 +3,7 @@
 #include <libc.h>
 #include <printf/printf.h>
 #include <logging.hpp>
+#include <vmm.h>
 
 static Logger log("PMM(From lyre os)");
 
@@ -12,6 +13,7 @@ extern limine_memmap_request m;
 #define memmap_request m
 
 extern limine_hhdm_request hhdm2;
+extern pagemap *krnl_page;
 #define hhdm_request hhdm2
 #define SIZEOF_ARRAY(ARRAY) (sizeof(ARRAY) / sizeof(ARRAY[0]))
 #define MIN(A, B) ({ \
@@ -148,6 +150,18 @@ void pmm_init(void) {
     log.debug("pmm: Usable memory: %luMiB\n", (usable_pages * 4096) / 1024 / 1024);
     log.debug("pmm: Reserved memory: %luMiB\n", (reserved_pages * 4096) / 1024 / 1024);
     slab_init();
+}
+
+void pmm_on_vmm_enabled() {
+    log.info("Mapping memory...\n");
+    struct limine_memmap_response *memmap = memmap_request.response;
+    struct limine_hhdm_response *hhdm = hhdm_request.response;
+    struct limine_memmap_entry **entries = memmap->entries;
+    for (size_t i = 0; i < memmap->entry_count; i++) {
+        struct limine_memmap_entry *entry = entries[i];
+        vmm_map_range(krnl_page, entry->base, entry->length, PTE_PRESENT | PTE_WRITABLE);
+        log.debug("entry %lu mapped.\n", i);
+    }
 }
 
 static void *inner_alloc(size_t pages, uint64_t limit) {

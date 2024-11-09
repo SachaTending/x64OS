@@ -98,11 +98,18 @@ int_common:
 	; does it load the address of certain things into a register. We then
 	; defer actually loading those until after DS was changed.
 	PUSH_STATE                             ; Push the state, except for the old ipl
+	push 0x28           ; code segment
+	lea rax, [rel .a]   ; jump address
+	push rax
+	retfq               ; return far - will go to .a now
+.a:
+	; update the segments
 	mov   ax, 0x30                         ; Use ring 0 segment for kernel mode use. We have backed the old values up
-	mov   ds,  ax
-	mov   es,  ax
-	mov   fs,  ax
-	mov   ss,  ax
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	mov ss, ax
 	mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
 	mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.
 	mov   rdx, [rdx]                       ; Load CS, to determine the previous mode when entering a hardware interrupt
@@ -150,11 +157,18 @@ syscall_entry:
 	; does it load the address of certain things into a register. We then
 	; defer actually loading those until after DS was changed.
 	PUSH_STATE                             ; Push the state, except for the old ipl
-	mov   rax, 0x30                        ; Use ring 0 segment for kernel mode use. We have backed the old values up
-	mov   ds,  ax
-	mov   es,  ax
-	mov   fs,  ax
-	mov   gs,  ax
+	push 0x28           ; code segment
+	lea rax, [rel .a]   ; jump address
+	push rax
+	retfq               ; return far - will go to .a now
+.a:
+	; update the segments
+	mov   ax, 0x30                         ; Use ring 0 segment for kernel mode use. We have backed the old values up
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	mov ss, ax
 	mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
 	mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.
 	mov   rdx, [rdx]                       ; Load CS, to determine the previous mode when entering a hardware interrupt

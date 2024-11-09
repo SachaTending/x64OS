@@ -24,5 +24,8 @@ void puts(const char *txt) {
 void _start3() {
     puts("Hello, C World!\n");
     puts("For now, all applications should use int 0x80 for syscalls.\n");
-    for(;;);
+    for(;;) {
+        u_int64_t recv = syscall2(2);
+        if (recv != 0) puts("data received\n");
+    }
 }

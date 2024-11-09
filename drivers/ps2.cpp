@@ -71,10 +71,12 @@ void ps2_send_dev(uint8_t byte) {
 static uint8_t _ps2_data_1 = 0;
 static bool _ps2_data_1_received = false;
 uint8_t ps2_recv_dev() {
-    int timeout = TIMEOUT*100;
+    int timeout = 1;
     while (_ps2_data_1_received == false) {
         timeout--;
+        asm volatile ("hlt");
         if (timeout <= 0) {
+            //log.debug("warning: timeout on read\n");
             return 0;
         }
     }

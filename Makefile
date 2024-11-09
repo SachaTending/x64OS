@@ -71,7 +71,7 @@ bin/kernel.elf: $(OBJ)
 	@echo "  [  LD] bin/kernel.elf"
 	@ld $(LDFLAGS) -o bin/kernel.elf -g $(COMP_OBJ)
 
-image.iso: bin/kernel.elf
+image.iso: bin/kernel.elf build_usermode
 	@cp bin/kernel.elf iso_root
 	@xorriso -as mkisofs -b limine-bios-cd.bin \
         -no-emul-boot -boot-load-size 4 -boot-info-table \
@@ -87,6 +87,9 @@ rung: image.iso
 
 run_uefi: image.iso
 	@qemu-system-x86_64 -cdrom image.iso -serial stdio -smp cores=2 $(KVM) -bios /usr/share/ovmf/x64/OVMF.fd
+
+build_usermode:
+	@cd user/init && make pack && cd ../..
 
 clean:
 	@rm $(COMP_OBJ) bin/kernel.elf $(HEADER_DEPS) -f

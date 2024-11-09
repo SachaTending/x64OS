@@ -8,7 +8,7 @@ _start:
     mov     rdi, 1                     ; file handle 1 is stdout
     mov     rsi, message               ; address of magic string to output
     mov     rdx, message_end - message ; number of bytes
-    int 0x80                           ; invoke operating system to do the write
+    syscall                            ; invoke operating system to do the write
     ; At this moment, x64OS kernel now thinks that this is a compatible binary and waits for exit syscall
     mov     eax, 60                    ; system call 60 is exit
     mov     rdi, _start2               ; exit code is address of _start2(x64OS sets RIP to it, linux just kills binary)
@@ -30,7 +30,7 @@ syscall2:
     mov rdx, rcx
     mov r8, r10
     mov r9, r8
-    int 0x80
+    syscall
     ret
 
 global syscall2

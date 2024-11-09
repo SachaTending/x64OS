@@ -57,3 +57,6 @@ static inline uint32_t ind(uint16_t port)
                    : "memory");
     return ret;
 }
+
+#define outl outd
+#define inl ind

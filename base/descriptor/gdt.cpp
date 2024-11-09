@@ -105,15 +105,20 @@ void GDT::Init() {
     gdt.descriptors[6].granularity = 0;
     gdt.descriptors[6].base_high8  = 0;
 
-    // SYSENTER related dummy entries
-    gdt.descriptors[7] = (struct gdt_descriptor){0};
-    gdt.descriptors[8] = (struct gdt_descriptor){0};
+    // SYSENTER related entries
+    gdt.descriptors[7].limit       = 0;
+    gdt.descriptors[7].base_low16  = 0;
+    gdt.descriptors[7].base_mid8   = 0;
+    gdt.descriptors[7].access      = 0b11110010;
+    gdt.descriptors[7].granularity = 0;
+    gdt.descriptors[7].base_high8  = 0;
+    gdt.descriptors[8].limit       = 0;
+    gdt.descriptors[8].base_low16  = 0;
+    gdt.descriptors[8].base_mid8   = 0;
+    gdt.descriptors[8].access      = 0b11111010;
+    gdt.descriptors[8].granularity = 0b00100000;
+    gdt.descriptors[8].base_high8  = 0;
 
-    #define WORKAROUND_FOR_INT_13_BUG
-    #ifdef WORKAROUND_FOR_INT_13_BUG
-    // Workaround bugfix of int_13 with segment=2
-    memcpy(&gdt.descriptors[2], &gdt.descriptors[6], sizeof(gdt_descriptor));
-    #endif
     // User code 64.
     gdt.descriptors[9].limit       = 0;
     gdt.descriptors[9].base_low16  = 0;

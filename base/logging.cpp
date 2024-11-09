@@ -16,18 +16,18 @@ static inline uint64_t rdtsc()
 }
 
 Logger::Logger(const char *name) {
-    this->name = name; // TODO: strdup(name) instead of this
+    this->name = strdup(name);
 }
 extern size_t global_ticks;
 #define TICK global_ticks
-
+void resume_sched();
 void pre_log() {
     //asm volatile ("cld");
-    //stop_sched();
+    stop_sched();
 }
 
 void post_log() {
-    //start_sched();
+    resume_sched();
     //asm volatile ("sti");
 }
 

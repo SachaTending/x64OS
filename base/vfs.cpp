@@ -47,8 +47,9 @@ vfs_mnt_t *vfs_get_mnt(const char *path) {
     }
     return m;
 }
-
+#define AUTOCORRECT_PATH(path) if (path[0] == '.') path += 1
 vfs_node_t *vfs_get_node(const char *path) {
+    AUTOCORRECT_PATH(path);
     vfs_mnt_t *mnt = vfs_get_mnt(path);
     if (mnt == NULL) {
         printf("vfs: no mnt for %s found\n", path);
@@ -60,6 +61,7 @@ vfs_node_t *vfs_get_node(const char *path) {
 }
 
 vfs_node_t *vfs_create_file(const char *path, bool is_dir) {
+    AUTOCORRECT_PATH(path);
     vfs_mnt_t *mnt = vfs_get_mnt(path);
     if (mnt == NULL) {
         return NULL;
@@ -70,6 +72,7 @@ vfs_node_t *vfs_create_file(const char *path, bool is_dir) {
 }
 
 vfs_stat_t *vfs_stat(const char *path) {
+    AUTOCORRECT_PATH(path);
     vfs_mnt_t *mnt = vfs_get_mnt(path);
     if (mnt == NULL) {
         return NULL;

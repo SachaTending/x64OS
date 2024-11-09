@@ -110,7 +110,7 @@ bool tmpfs_file_exists(struct tmpfs_mnt *context, const char *path) {
 }
 
 vfs_node_t *tmpfs_create_file(struct vfs_mnt *mnt, const char *path, bool is_dir) {
-    printf("tmpfs: create file %s, is dir: %d\n", path, is_dir);
+    //printf("tmpfs: create file %s, is dir: %d\n", path, is_dir);
     tmpfs_mnt *context = (tmpfs_mnt *)mnt->priv;
     if (tmpfs_file_exists(context, path) == true) {
         return NULL; // File already exists
@@ -139,7 +139,6 @@ vfs_node_t *tmpfs_get_file(struct vfs_mnt *mnt, const char *path) {
             n->write = tmpfs_write;
             n->ioctl = tmpfs_ioctl;
             n->close = tmpfs_close;
-            // TODO: Add other functions
             return n;
         }
     }

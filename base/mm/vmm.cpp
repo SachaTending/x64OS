@@ -23,11 +23,11 @@ void vmm_map_range(pagemap *pgm, uint64_t start, size_t count, uint64_t flags=PT
     uint64_t end = ALIGN_UP(start+count, 4096);
     size_t pages = (end/4096)-(start/4096);
     pages += 1;
-    printf("start: 0x%lx, end: 0x%lx, pages to map: %lu\n", start2, end, pages);
+    //printf("start: 0x%lx, end: 0x%lx, pages to map: %lu\n", start2, end, pages);
     for (size_t i=0;i<pages;i++) {
         vmm_map_page(pgm, start2+(i*4096), start2+(i*4096), flags);
         vmm_map_page(pgm, (start2+(i*4096))+VMM_HIGHER_HALF, start2+(i*4096), flags);
-        printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), start2+(i*4096));
+        //printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), start2+(i*4096));
     }
 }
 

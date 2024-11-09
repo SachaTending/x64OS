@@ -81,7 +81,7 @@ void map_vmm(uint64_t addr, size_t count) {
         vmm_map_page(krnl_page, a, a+VMM_HIGHER_HALF, PTE_WRITABLE | PTE_PRESENT);
     }
 }
-
+void pmm_on_vmm_enabled();
 void vmm_setup() {
 #if 1
     trace(pagemap *pg = (pagemap *)malloc(sizeof(pagemap)));
@@ -125,9 +125,10 @@ void vmm_setup() {
         vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE);
     }
     printf("\n");
+    krnl_page = pg;
+    pmm_on_vmm_enabled();
     log.info("Switching pages...\n");
     vmm_switch_to(pg);
-    krnl_page = pg;
 #endif
 }
 
@@ -247,14 +248,13 @@ extern "C" int jump_to_usermode();
 void init_tss();
 void init_elf();
 void init_ps2();
+void init_pci();
 void Kernel::Main() {
     if (krnl_called) return;
     krnl_called = true;
-    log.info("Trying to setup fpu...\n");
-    fpu_init();
-    log.info("Trying to setup SSE...\n");
-    sse_enable();
     vmm_setup();
+    fpu_init();
+    sse_enable();
     acpi_init();
     parse_opts();
     madt_init();
@@ -263,11 +263,11 @@ void Kernel::Main() {
     init_pit();
     init_pic();
     init_elf();
+    init_pci();
     init_ps2();
     //asm volatile ("int $32");
     log.info("Initializing TSS...\n");
     init_tss();
-    log.info("%lx\n", *((uint32_t *)test_user_function));
     //for(;;);
     log.info("Starting scheduler...\n");
     sched_init();
