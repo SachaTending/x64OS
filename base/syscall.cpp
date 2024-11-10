@@ -27,7 +27,7 @@ static Logger log("Syscall handler");
 size_t mgmt_syscall_open(const char *path);
 void mgmt_syscall_read(size_t handle, void *buf, size_t count);
 void sys_print(const char *txt, uint64_t len) {
-    printf("from user mode program: ");
+    printf("");
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
 }
 uint8_t ps2_recv_dev();

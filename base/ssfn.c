@@ -57,7 +57,8 @@ void fast_memcpy(void *dst, const void *src, size_t n) {
 }
 
 void ssfn_putc2(uint32_t c) {
-
+    uint32_t oldx, oldy;
+    uint8_t *oldfb;
     if (c == '\n') {
         ssfn_dst.y+=ssfn_src->width;
         ssfn_dst.x=0;
@@ -68,9 +69,15 @@ void ssfn_putc2(uint32_t c) {
         ssfn_dst.x = 0;
         goto end;
     }
-    uint32_t oldx = ssfn_dst.x;
-    uint32_t oldy = ssfn_dst.y;
-    uint8_t *oldfb = ssfn_dst.ptr;
+    if (c == '\t') {
+        for (int i=0;i<4;i++) {
+            ssfn_putc2(' ');
+        }
+        goto end;
+    }
+    oldx = ssfn_dst.x;
+    oldy = ssfn_dst.y;
+    oldfb = ssfn_dst.ptr;
     SSFN_RENDER(c);
     if (fb2) {
         ssfn_dst.x = oldx;

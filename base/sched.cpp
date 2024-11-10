@@ -88,9 +88,9 @@ void sched_kill_pid(int pid) {
 
 spinlock_t sched_lock = SPINLOCK_INIT;
 #define STACK_SIZE 128*1024
-
+bool _sched_stop_internal = false;
 void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *pgm=krnl_page, uint64_t tls=0) {
-    SCHED_STOP = true;
+    _sched_stop_internal = true;
     spinlock_acquire(&sched_lock);
     task_t *new_task = new task_t;
     new_task->name = strdup(name);
@@ -129,7 +129,7 @@ void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *
     new_task->pgm = pgm;
     mgmt_on_new_program(new_task->pid);
     spinlock_release(&sched_lock);
-    SCHED_STOP = false;
+    _sched_stop_internal = false;
     //log.debug("Task with name %s created, entrypoint: 0x%lx, usermode: %d, pagemap: 0x%lx, pid: %d\n", name, task, usermode, pgm, new_task->pid);
 }
 
@@ -170,6 +170,7 @@ task_t *sched_kill_task_by_state(task_t *task) {
 }
 void sched_handl(idt_regs *regs) {
     if (SCHED_STOP) return; // scheduler stopped
+    if (_sched_stop_internal) return; // another flag
     if (!SCHED_READY) return;
     if (!SCHED_STARTED) {
         root_task->regs.cr2 = regs->cr2;

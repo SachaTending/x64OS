@@ -20,16 +20,18 @@ size_t strlen(const char *str) {
 void puts(const char *txt) {
     print_syscall(txt, strlen(txt));
 }
-
+char buf[512];
+int64_t fd;
 void _start3() {
     puts("Hello, C World!\n");
-    puts("For now, all applications should use int 0x80 for syscalls.\n");
-    int64_t fd = syscall(2, "/Makefile");
+    puts("For now, all applications should use syscall for syscalls.\n");
+    fd = syscall(2, "/Makefile");
     if (fd < 0) {
         puts("Failed to open /Makefile, idk why.\n");
         for(;;);
     }
-    char buf[512];
+    puts("Successfully opened /Makefile\n");
+    //char buf[512];
     syscall(0, fd, &buf, 510);
     puts("/Makefile contents:");puts((const char *)&buf);
     for(;;);
