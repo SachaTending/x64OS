@@ -5,6 +5,7 @@
 #include <vmm.h>
 #include <krnl.hpp>
 #include <logging.hpp>
+#include <cpu.h>
 
 static Logger log("Scheduler");
 
@@ -26,7 +27,7 @@ void dummy_task() {
 int getpid() {
     return current_task->pid;
 }
-
+void mgmt_on_new_program(size_t pid);
 void sched_init() {
     root_task = new task_t;
     root_task->regs.rip = (uint64_t)task_entry;
@@ -41,6 +42,7 @@ void sched_init() {
     root_task->regs.rsp = ((uint64_t)root_task->stack_addr)+64*1024;
     current_task = root_task;
     root_task->state = TASK_READY;
+    mgmt_on_new_program(root_task->pid);
 }
 
 bool SCHED_STOP = false;
@@ -87,7 +89,7 @@ void sched_kill_pid(int pid) {
 spinlock_t sched_lock = SPINLOCK_INIT;
 #define STACK_SIZE 128*1024
 
-void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *pgm=krnl_page) {
+void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *pgm=krnl_page, uint64_t tls=0) {
     SCHED_STOP = true;
     spinlock_acquire(&sched_lock);
     task_t *new_task = new task_t;
@@ -98,6 +100,7 @@ void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *
     new_task->state = TASK_CREATE;
     new_task->regs.rip = (uint64_t)task_entry;
     new_task->regs.rax = (uint64_t)task;
+    new_task->tls = tls;
     //new_task->regs.rflags = 0x202;
     new_task->regs.rflags |= (1 << 9);
     if (usermode == true) {
@@ -124,6 +127,7 @@ void create_task(int (*task)(), const char *name, bool usermode=false, pagemap *
     task_p->next = new_task; 
     new_task->last_task = true;
     new_task->pgm = pgm;
+    mgmt_on_new_program(new_task->pid);
     spinlock_release(&sched_lock);
     SCHED_STOP = false;
     //log.debug("Task with name %s created, entrypoint: 0x%lx, usermode: %d, pagemap: 0x%lx, pid: %d\n", name, task, usermode, pgm, new_task->pid);
@@ -172,7 +176,7 @@ void sched_handl(idt_regs *regs) {
         if (root_task->regs.cs == 0) {
             root_task->regs.cs = regs->cs;
             root_task->regs.es = regs->es;
-            root_task->regs.fs = regs->fs;
+            root_task->regs.fs = root_task->tls;
             root_task->regs.gs = regs->gs;
             root_task->regs.ds = regs->ds;
             root_task->regs.ss = regs->ss;
@@ -195,13 +199,14 @@ void sched_handl(idt_regs *regs) {
     if (ntask->regs.cs == 0) {
         ntask->regs.cs = regs->cs;
         ntask->regs.es = regs->es;
-        ntask->regs.fs = regs->fs;
+        ntask->regs.fs = ntask->tls;
         ntask->regs.gs = regs->gs;
         ntask->regs.ds = regs->ds;
         ntask->regs.ss = regs->ss;
     }
     //ntask->regs.gs = regs->gs;
     load_regs(ntask, regs);
+    wrmsr(0xC0000100, ntask->tls);
     ntask->state = TASK_RUNNING;
     //regs->rflags |= (1 << 9);
     current_task = ntask;

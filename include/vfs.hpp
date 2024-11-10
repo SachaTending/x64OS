@@ -55,11 +55,12 @@ typedef struct vfs_fs {
 } vfs_fs_t;
 
 enum VFS_ERRORS {
-    VFS_OK,
-    VFS_INVALID_FS,
-    VFS_INVALID_BLOCK,
-    VFS_INVALID_OPTIONS,
-    VFS_ALREADY_MOUNTED
+    VFS_OK = 0,
+    VFS_INVALID_FS = -1,
+    VFS_INVALID_BLOCK = -2,
+    VFS_INVALID_OPTIONS = -3,
+    VFS_ALREADY_MOUNTED = -4,
+    VFS_FILE_NOT_FOUND = -5
 };
 
 int vfs_mount(const char *block, const char *mnt_path, vfs_fs_t *fs);

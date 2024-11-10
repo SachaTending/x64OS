@@ -36,7 +36,7 @@ LOADER_ERROR elf_check_prg(struct prg_loader *prg_loader, vfs_node_t *node) {
     return err; // Return error(or ok, who knows?)
 }
 
-LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *pgm, char **ld_path, uint64_t *entry) {
+LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls) {
     // Check if program valid
     LOADER_ERROR err = prg_loader->check(prg_loader, node);
     if (err != LOADER_OK) { // If got error
@@ -85,6 +85,22 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                 *ld_path = new char[phdr->p_filesz+1];
                 node->seek(node, phdr->p_offset, SEEK_SET);
                 node->read(node, (void *)*ld_path, phdr->p_filesz);
+                break;
+            case PT_TLS:
+                // Thread-local storage(i hate this)
+                // This is (probably) same as PT_LOAD so i just copied code.
+                if (phdr->p_flags & PF_W) { // If segment is also readable...
+                    vmm_flags |= PTE_WRITABLE; // Set PTE_WRITABLE flag
+                }
+                misalign = phdr->p_vaddr & (4096 - 1);
+                page_count = DIV_ROUNDUP(phdr->p_memsz + misalign, 4096);
+                phys = pmm_alloc(page_count);
+                //printf("misalign: %lu, page_count: %lu, phys: 0x%lx\n", misalign, page_count, phys);
+                for (size_t i=0;i<page_count;i++) {
+                    vmm_map_page(pgm, phdr->p_vaddr+(i*4096), ((uintptr_t)phys)+(i*4096), vmm_flags | PTE_USER);
+                }
+                node->seek(node, phdr->p_offset, SEEK_SET);
+                node->read(node, (void *)(((uint64_t)phys)+misalign), phdr->p_filesz);
                 break;
             default:
                 break;

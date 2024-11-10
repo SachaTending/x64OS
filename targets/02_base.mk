@@ -14,6 +14,7 @@ OBJ += $(addprefix base/, \
 	unpack_initrd.o \
 	tss.o \
 	cpuid.o \
+	proc_mgmt.o \
 )
 
 base/compinfo.o:

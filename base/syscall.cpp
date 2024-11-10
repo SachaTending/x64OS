@@ -6,9 +6,26 @@
 #include <libc.h>
 #include <sys/syscall.h>
 #include <sched.hpp>
+#include <vfs.hpp>
+#include <frg/std_compat.hpp>
+#include <frg/vector.hpp>
+#include <new>
+
+struct proc_handle {
+    size_t id;
+    vfs_node_t *node;
+};
+
+typedef frg::vector<proc_handle *, frg::stl_allocator> proc_handles_t;
+
+struct proc_info {
+    size_t pid;
+    proc_handles_t *handles;
+};
 
 static Logger log("Syscall handler");
-
+size_t mgmt_syscall_open(const char *path);
+void mgmt_syscall_read(size_t handle, void *buf, size_t count);
 void sys_print(const char *txt, uint64_t len) {
     printf("from user mode program: ");
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
@@ -18,17 +35,17 @@ void int80(idt_regs *regs) {
     //printf("SYSCALL: %u\n", regs->rax);
     switch (regs->rax)
     {
-        case 2:
-            // TEMP SYSCALL: Read PS/2
-            //asm volatile ("sti");
-            regs->rax = ps2_recv_dev();
-            //asm volatile ("cld");
+        case 0:
+            mgmt_syscall_read(regs->rdi, (void *)regs->rsi, (size_t)regs->rdx);
             break;
         case 1:
             if (regs->rdi == 1) { 
                 sys_print((const char *)regs->rsi, regs->rdx);
             }
             break;
+        case 2:
+            regs->rax = mgmt_syscall_open((const char *)regs->rdi);
+            break;;
         case 39:
             regs->rax = getpid();
             break;

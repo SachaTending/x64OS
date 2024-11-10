@@ -21,7 +21,7 @@ void register_loader(prg_loader_t *prg) {
 
 #define BUF_LEN 512
 
-LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64_t *entry) {
+LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls) {
     vfs_node_t *file = vfs_get_node(path);
     //printf("get node: 0x%lx\n", file);
     if (file == NULL) {
@@ -46,7 +46,7 @@ LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64
             LOADER_ERROR err = loader->check(loader, file); // Check if program valid
             if (err == LOADER_OK) {
                 file->seek(file, 0, SEEK_SET);
-                err = loader->load(loader, file, pgm, ld_path, entry);
+                err = loader->load(loader, file, pgm, ld_path, entry, tls);
                 return err;
             }
         }
