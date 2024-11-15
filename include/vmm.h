@@ -1,13 +1,15 @@
 #pragma once
-#include <vec.h>
+#include <mmap.h>
 #include <stdint.h>
 #include <spinlock.h>
 #include <stdbool.h>
-// Source code was taken from lyre os project, not wrote by me(TendingStream73)
+#define PAGE_SIZE 4096
+typedef frg::vector<struct mmap_range_local *, frg::stl_allocator> mmap_ranges_t;
+// Source code was taken from lyre os project, but modified by me(TendingStream73)
 struct pagemap {
     spinlock_t lock;
     uint64_t *top_level;
-    VECTOR_TYPE(struct mmap_range_local *) mmap_ranges;
+    mmap_ranges_t mmap_ranges;
 };
 
 #ifdef __cplusplus
@@ -27,3 +29,4 @@ void vmm_switch_to(struct pagemap *pagemap);
 #endif
 
 void vmm_map_range(pagemap *pgm, uint64_t start, size_t count, uint64_t flags=PTE_PRESENT);
+struct pagemap *vmm_new_pagemap(void);

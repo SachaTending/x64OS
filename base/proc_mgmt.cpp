@@ -5,6 +5,7 @@
 #include <sched.hpp>
 #include <libc.h>
 #include <logging.hpp>
+#include <mmap.h>
 
 static Logger log("Process manager");
 
@@ -93,6 +94,16 @@ size_t mgmt_syscall_open(const char *path) {
     proc->handles.push(handle);
     log.debug("%lu: file opened, fd: %lu\n", getpid(), handle->id);
     return handle->id;
+}
+
+void *mgmt_mmap(uintptr_t hint, size_t length, uint64_t flags, int fdnum, size_t offset) {
+    vfs_node_t *node;
+    log.debug("mmap: hint: 0x%lx, length: %lu, flags: %lu, fdnum: %d, offset: %lu, prot: %lu, flags(real): %lu\n", hint, length, flags, fdnum, offset,
+        (int)flags >> 32, flags & 0xffffffff);
+    if (fdnum != -1) {
+        node = mgmt_find_handle(fdnum)->node;
+    }
+    return mmap(get_current_task()->pgm, hint, length, (int)(flags >> 32), flags, node, offset);
 }
 
 void mgmt_on_new_program(size_t pid) {

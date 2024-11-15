@@ -20,7 +20,7 @@ LOADER_ERROR elf_check_prg(struct prg_loader *prg_loader, vfs_node_t *node) {
     if (memcmp((const void *)&(hdr->e_ident), (const void *)&ELFMAG, SELFMAG) || // Does file has valid header?
         hdr->e_ident[EI_DATA] != ELFDATA2LSB || // Is file little endian?
         hdr->e_ident[EI_CLASS] != ELFCLASS64 || // Is file 64 bit?
-        hdr->e_type != ET_EXEC || // Is file is executable?
+        //hdr->e_type != ET_EXEC || // Is file is executable?
         hdr->e_shnum < 0 // Does file has any sections?
         ) {
         err =  LOADER_INVALID_EXEC; // Return error invalid file
@@ -36,15 +36,17 @@ LOADER_ERROR elf_check_prg(struct prg_loader *prg_loader, vfs_node_t *node) {
     return err; // Return error(or ok, who knows?)
 }
 
-LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls) {
+LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls, auxval *aux, uint64_t load_base=0) {
     // Check if program valid
     LOADER_ERROR err = prg_loader->check(prg_loader, node);
     if (err != LOADER_OK) { // If got error
+        printf("elf: err=%u\n", err);
         return err; // Return it
     }
     node->seek(node, 0, SEEK_SET); // Seek to 0
     Elf64_Ehdr *hdr = new Elf64_Ehdr; // Allocate memory for elf header
     if (hdr == NULL) { // Is memory for elf header allocated?
+        printf("elf: alloc fail\n");
         return LOADER_ALLOC_FAIL; // Return error alloc failed
     }
     node->read(node, (void *)hdr, sizeof(Elf64_Ehdr)); // Read header
@@ -63,6 +65,7 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
         switch (phdr->p_type)
         {
             case PT_LOAD:
+                printf("pt_load\n");
                 // Load data from executable to memory
                 if (phdr->p_flags & PF_W) { // If segment is also readable...
                     vmm_flags |= PTE_WRITABLE; // Set PTE_WRITABLE flag
@@ -72,12 +75,13 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                 phys = pmm_alloc(page_count);
                 //printf("misalign: %lu, page_count: %lu, phys: 0x%lx\n", misalign, page_count, phys);
                 for (size_t i=0;i<page_count;i++) {
-                    vmm_map_page(pgm, phdr->p_vaddr+(i*4096), ((uintptr_t)phys)+(i*4096), vmm_flags);
+                    vmm_map_page(pgm, phdr->p_vaddr+(i*4096)+load_base, ((uintptr_t)phys)+(i*4096), vmm_flags);
                 }
                 node->seek(node, phdr->p_offset, SEEK_SET);
                 node->read(node, (void *)(((uint64_t)phys)+misalign), phdr->p_filesz);
                 break;
             case PT_INTERP:
+                printf("pt_interp\n");
                 // Interpeter information
                 if (ld_path == NULL) {
                     break;
@@ -85,28 +89,19 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                 *ld_path = new char[phdr->p_filesz+1];
                 node->seek(node, phdr->p_offset, SEEK_SET);
                 node->read(node, (void *)*ld_path, phdr->p_filesz);
+                printf("ld_path=%s\n", *ld_path);
                 break;
-            case PT_TLS:
-                // Thread-local storage(i hate this)
-                // This is (probably) same as PT_LOAD so i just copied code.
-                if (phdr->p_flags & PF_W) { // If segment is also readable...
-                    vmm_flags |= PTE_WRITABLE; // Set PTE_WRITABLE flag
-                }
-                misalign = phdr->p_vaddr & (4096 - 1);
-                page_count = DIV_ROUNDUP(phdr->p_memsz + misalign, 4096);
-                phys = pmm_alloc(page_count);
-                //printf("misalign: %lu, page_count: %lu, phys: 0x%lx\n", misalign, page_count, phys);
-                for (size_t i=0;i<page_count;i++) {
-                    vmm_map_page(pgm, phdr->p_vaddr+(i*4096), ((uintptr_t)phys)+(i*4096), vmm_flags | PTE_USER);
-                }
-                node->seek(node, phdr->p_offset, SEEK_SET);
-                node->read(node, (void *)(((uint64_t)phys)+misalign), phdr->p_filesz);
+            case PT_PHDR:
+                aux->at_phdr = phdr->p_vaddr;
                 break;
             default:
                 break;
         }
     }
-    *entry = hdr->e_entry;
+    *entry = hdr->e_entry + load_base;
+    aux->at_entry = hdr->e_entry + load_base;
+    aux->at_phent = hdr->e_phentsize;
+    aux->at_phnum = hdr->e_phnum;
     return LOADER_OK;
 }
 extern prg_loader_t elf_loader;

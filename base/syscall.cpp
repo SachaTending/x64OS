@@ -26,13 +26,14 @@ struct proc_info {
 static Logger log("Syscall handler");
 size_t mgmt_syscall_open(const char *path);
 void mgmt_syscall_read(size_t handle, void *buf, size_t count);
+void *mgmt_mmap(uintptr_t hint, size_t length, uint64_t flags, int fdnum, size_t offset);
 void sys_print(const char *txt, uint64_t len) {
     printf("");
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
 }
 uint8_t ps2_recv_dev();
 void int80(idt_regs *regs) {
-    //printf("SYSCALL: %u\n", regs->rax);
+    log.debug("SYSCALL: %u\n", regs->rax);
     switch (regs->rax)
     {
         case 0:
@@ -45,12 +46,18 @@ void int80(idt_regs *regs) {
             break;
         case 2:
             regs->rax = mgmt_syscall_open((const char *)regs->rdi);
-            break;;
+            break;
+        case 4:
+            regs->rax = (uint64_t)mgmt_mmap(regs->rdi, regs->rsi, regs->rdx, regs->r8, regs->r9);
+            break;
         case 39:
             regs->rax = getpid();
             break;
         case 60: // exit
             sched_kill_pid(getpid());
+            break;
+        case 512:
+            log.debug("debug from process: %s\n", regs->rdi);
             break;
         default:
             log.debug("unknown syscall: %u\n", regs->rax);

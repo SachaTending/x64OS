@@ -2,6 +2,8 @@
 #include <vmm.h>
 #include <limine.h>
 
+extern pagemap *krnl_page;
+
 extern limine_hhdm_request hhdm2;
 
 #define debug(a, ...) printf(a, __VA_ARGS__)
@@ -31,6 +33,35 @@ void vmm_map_range(pagemap *pgm, uint64_t start, size_t count, uint64_t flags=PT
     }
 }
 
+struct pagemap *vmm_new_pagemap(void) {
+    struct pagemap *pagemap = new struct pagemap;
+    if (pagemap == NULL) {
+        //errno = ENOMEM;
+        goto cleanup;
+    }
+
+    pagemap->lock = (spinlock_t)SPINLOCK_INIT;
+    pagemap->top_level = pmm_alloc(1);
+    if (pagemap->top_level == NULL) {
+        //errno = ENOMEM;
+        goto cleanup;
+    }
+
+    pagemap->top_level = (void *)pagemap->top_level + VMM_HIGHER_HALF;
+    if (krnl_page != 0) {
+        for (size_t i = 256; i < 512; i++) {
+            pagemap->top_level[i] = krnl_page->top_level[i];
+        }
+    }
+    return pagemap;
+
+cleanup:
+    if (pagemap != NULL) {
+        free(pagemap);
+    }
+
+    return NULL;
+}
 
 extern "C" {
     void *pmm_alloc(size_t pages);

@@ -7,10 +7,10 @@ OBJ = entry.o entry2.o
 %.o: %.asm
 	@echo "  [NASM] $@"
 	@nasm -felf64 -o $@ $< -g
-
+.PHONY: init
 init: $(OBJ)
 	@echo "  [  LD] init"
-	@gcc -o init $(OBJ) -nostdlib -static -lc -g
+	@gcc -o init $(OBJ) -nostdlib -lc -g -Wl,-dynamic-linker=/ld.so
 
 pack: init
 	tar cv . > ../../iso_root/test.tar

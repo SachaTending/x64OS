@@ -170,7 +170,7 @@ void init_pic();
 
 #include <vfs.hpp>
 
-int exec(const char *path);
+int exec(const char *path, int argc, char *argv[], char *envp[]);
 
 vfs_fs_t *tmpfs_create_fs();
 void unpack_initrd();
@@ -228,7 +228,9 @@ int krnl_task() {
     }
     */
     log.info("Starting /init...\n");
-    exec("/init");
+    const char *argv[] = {"init", NULL};
+    const char *envp[] = {NULL};
+    exec("/init", 1, argv, envp);
     for(;;) asm volatile ("hlt");
 }
 

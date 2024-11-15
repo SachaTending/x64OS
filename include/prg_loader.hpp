@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <vfs.hpp>
 #include <vmm.h>
+#include <sched.hpp>
 
 enum LOADER_ERROR {
     LOADER_OK = 0,
@@ -12,7 +13,7 @@ enum LOADER_ERROR {
 };
 
 typedef LOADER_ERROR (*check_t)(struct prg_loader *prg_loader, vfs_node_t *node);
-typedef LOADER_ERROR (*load_t)(struct prg_loader *prg_loader, vfs_node_t *node, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls);
+typedef LOADER_ERROR (*load_t)(struct prg_loader *prg_loader, vfs_node_t *node, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls, auxval *aux, uint64_t load_base=0);
 
 typedef struct prg_loader
 {
@@ -25,4 +26,4 @@ typedef struct prg_loader
 } prg_loader_t;
 
 void register_loader(prg_loader_t *prg);
-LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls);
+LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64_t *entry, uint64_t *tls, auxval *aux, uint64_t load_base=0);

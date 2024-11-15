@@ -42,7 +42,7 @@ void eoi(uint8_t irq);
 #define BIT(b) (1 << b)
 #define errcode_13_shift (regs->ErrorCode >> 1)
 void syscall_c_entry(idt_regs *);
-
+bool mmap_pf(idt_regs *regs);
 void on_page_fault(idt_regs *regs) {
     printf("Got Page fault, flags: ");
     #define is_bit_set(bit) (regs->ErrorCode & BIT(bit))
@@ -91,6 +91,9 @@ extern "C" void idt_handler2(idt_regs *regs) {
             }
             printf(" erc=%u segnment=%u\n", erc, errcode_13_shift >> 2);
         } else if (regs->IntNumber == 14) {
+            if (mmap_pf(regs)) {
+                return;
+            }
             on_page_fault(regs);
         }
         printf("\n");

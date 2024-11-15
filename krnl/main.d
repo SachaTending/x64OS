@@ -1,8 +1,10 @@
 krnl/main.o: krnl/main.cpp include/libc.h include/stddef.h \
  include/stdint.h include/stdarg.h include/stdbool.h include/krnl.hpp \
- include/limine.h include/vmm.h include/vec.h include/spinlock.h \
+ include/limine.h include/vmm.h include/mmap.h \
+ frigg/include/frg/std_compat.hpp frigg/include/frg/vector.hpp \
+ frigg/include/frg/macros.hpp include/vfs.hpp include/spinlock.h \
  include/logging.hpp include/cpu.h include/io.h include/ioapic.hpp \
- include/sched.hpp include/idt.hpp include/prg_loader.hpp include/vfs.hpp
+ include/sched.hpp include/idt.hpp include/prg_loader.hpp
 include/libc.h:
 include/stddef.h:
 include/stdint.h:
@@ -11,7 +13,11 @@ include/stdbool.h:
 include/krnl.hpp:
 include/limine.h:
 include/vmm.h:
-include/vec.h:
+include/mmap.h:
+frigg/include/frg/std_compat.hpp:
+frigg/include/frg/vector.hpp:
+frigg/include/frg/macros.hpp:
+include/vfs.hpp:
 include/spinlock.h:
 include/logging.hpp:
 include/cpu.h:
@@ -20,4 +26,3 @@ include/ioapic.hpp:
 include/sched.hpp:
 include/idt.hpp:
 include/prg_loader.hpp:
-include/vfs.hpp:

@@ -58,10 +58,10 @@ fetch_cr3:
 	xor rax, rax
 	pop  ax
 	mov  ds, ax
-	cmp  ax,  0x4b     			  ; If the data segment is in user mode...
-	jne  .a2
-	swapgs                        ; Swap to the user's GS.
-.a2:
+	;cmp  ax,  0x4b     			  ; If the data segment is in user mode...
+	;jne  .a2
+	;swapgs                        ; Swap to the user's GS.
+;.a2:
 	;mov ax, 0x10
 	pop  ax
 	mov  es, ax
@@ -99,6 +99,7 @@ int_common:
 	; defer actually loading those until after DS was changed.
 	PUSH_STATE                             ; Push the state, except for the old ipl
 	; update the segments
+	cld
 	mov   ax, 0x30                         ; Use ring 0 segment for kernel mode use. We have backed the old values up
 	mov ds, ax
 	mov es, ax
@@ -126,7 +127,9 @@ int_common:
 	pop   rbx                              ; Pop the RBX register
 	pop   rax                              ; Pop the RAX register
 	add   rsp, 16                          ; Pop the interrupt number and the error code
-	iretq
+	swapgs
+.a2:
+	iretq ; BUG: Triggers #UD with e=0x0010
 %macro INT 2
 
 global int_%1

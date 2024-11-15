@@ -112,6 +112,7 @@ void GDT::Init() {
     gdt.descriptors[7].access      = 0b11110010;
     gdt.descriptors[7].granularity = 0;
     gdt.descriptors[7].base_high8  = 0;
+
     gdt.descriptors[8].limit       = 0;
     gdt.descriptors[8].base_low16  = 0;
     gdt.descriptors[8].base_mid8   = 0;
@@ -147,8 +148,8 @@ void GDT::Init() {
     // Set the pointer.
     gdtr.limit = (sizeof(gdt) - 1);
     gdtr.base  = (uint64_t)&gdt;
-    gdt.descriptors[7] = gdt.descriptors[9];
-    gdt.descriptors[8] = gdt.descriptors[10];
+    //gdt.descriptors[7] = gdt.descriptors[9];
+    //gdt.descriptors[8] = gdt.descriptors[10];
     gdt_reload();
 }
 extern "C" void load_tss(int desc);
