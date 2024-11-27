@@ -4,14 +4,7 @@
 #include <spinlock.h>
 
 extern "C" int print_debug;
-static inline void outb(uint16_t port, uint8_t val)
-{
-    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) : "memory");
-    /* There's an outb %al, $imm8 encoding, for compile-time constant port numbers that fit in 8b. (N constraint).
-     * Wider immediate constants would be truncated at assemble-time (e.g. "i" constraint).
-     * The  outb  %al, %dx  encoding is the only option for all other cases.
-     * %1 expands to %dx because  port  is a uint16_t.  %w1 could be used if we had the port number a wider C type */
-}
+#include <io.h>
 
 int is_format_letter(char c) {
     return c == 'c' ||  c == 'd' || c == 'i' ||c == 'e' ||c == 'E' ||c == 'f' ||c == 'g' ||c == 'G' ||c == 'o' ||c == 's' || c == 'u' || c == 'x' || c == 'X' || c == 'p' || c == 'n';
@@ -194,6 +187,7 @@ void putchar(char c) {
     outb(0xe9, c);
     #endif
     #ifndef E9_HACK
+    while ((inb(0x3f8 + 5) & 0x20) == 0);
     outb(0x3f8, c);
     #endif
     if (c == '\e') {

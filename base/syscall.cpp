@@ -79,7 +79,7 @@ __attribute__((constructor)) void init_syscall() {
     wrmsr(0xc0000080, rdmsr(0xc0000080) | 1);
     wrmsr(0xc0000081, (((6*8)-16) >> 48  ));
     wrmsr(0xC0000082, (uint64_t)syscall_entry);
-    wrmsr(0xC0000100, 0x30);
-    wrmsr(0xC0000101, 0x48 | 3);
-    wrmsr(0xC0000102, 0x30);
+    wrmsr(0xC0000100, 0xff);
+    wrmsr(0xC0000101, 0xff);
+    wrmsr(0xC0000102, 0xff);
 }

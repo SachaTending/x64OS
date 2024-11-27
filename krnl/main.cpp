@@ -274,7 +274,7 @@ void Kernel::Main() {
     log.info("Starting scheduler...\n");
     sched_init();
     create_task(krnl_task, "task2");
-    create_task(krnl2_task, "task3(should exit)");
+    //create_task(krnl2_task, "task3(should exit)");
     //create_task(test_user_function, "usermode", true);
     start_sched();
     for(;;);

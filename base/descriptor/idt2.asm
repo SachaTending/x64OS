@@ -46,7 +46,7 @@ fetch_cr3:
 	push ax
 	mov  ax,  ds
 	push ax
-	cmp  ax,  0x4b     			  ; If the data segment is in user mode...
+	cmp  ax,  7*8     			  ; If the data segment is in user mode...
 	jne  .a1
 	swapgs                        ; Swap to the kernel GS.
 .a1:
@@ -58,15 +58,14 @@ fetch_cr3:
 	xor rax, rax
 	pop  ax
 	mov  ds, ax
-	;cmp  ax,  0x4b     			  ; If the data segment is in user mode...
-	;jne  .a2
-	;swapgs                        ; Swap to the user's GS.
-;.a2:
+	cmp  ax,  7*8     			  ; If the data segment is in user mode...
+	jne  .a2
+	swapgs                        ; Swap to the user's GS.
+.a2:
 	;mov ax, 0x10
 	pop  ax
 	mov  es, ax
 	pop  ax
-	;mov ax, 0x10
 	mov  fs, ax
 	pop  ax
 	;mov ax, 0x10
@@ -85,7 +84,8 @@ fetch_cr3:
 	pop  r9
 	pop  r8
 %endmacro
-
+extern malloc
+extern free
 int_common:
     push  rax
 	push  rbx
@@ -115,10 +115,15 @@ int_common:
 	mov   rbp, rsp
 	cld                                    ; Clear direction flag, will be restored by iretq
 	mov   rdi, rsp                         ; Retrieve the idt_regs to call the trap handler
+	;push dword 64*1024
+	;call malloc
+	;mov rsp, rax
+	;add rsp, 64*1024
 	push  rdi							   ; Push pointer to registers
 	call  idt_handler2                     ; And call idt_handler!!
-	pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
+	;pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
 	mov   rsp, rax                         ; Use the new idt_regs instance as what to pull:
+	;mov   rsp, rax                         ; Use the new idt_regs instance as what to pull:
 	pop   rbp                              ; Leave the stack frame
 	pop   rcx                              ; Skip over the RIP duplicate that we pushed
 	POP_STATE                              ; Pop the state
@@ -127,8 +132,8 @@ int_common:
 	pop   rbx                              ; Pop the RBX register
 	pop   rax                              ; Pop the RAX register
 	add   rsp, 16                          ; Pop the interrupt number and the error code
-	swapgs
-.a2:
+	;swapgs
+;.a2:
 	iretq ; BUG: Triggers #UD with e=0x0010
 %macro INT 2
 
@@ -178,7 +183,7 @@ syscall_entry:
 	mov   rdi, rsp                         ; Retrieve the idt_regs to call the trap handler
 	push  rdi							   ; Push pointer to registers
 	call  idt_handler2                     ; And call idt_handler!!
-	pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
+	;pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
 	mov   rsp, rax                         ; Use the new idt_regs instance as what to pull:
 	pop   rbp                              ; Leave the stack frame
 	pop   rcx                              ; Skip over the RIP duplicate that we pushed

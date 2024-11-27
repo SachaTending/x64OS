@@ -159,7 +159,7 @@ void gdt_set_tss(uint64_t tss) {
     gdt.tss.Base2 = (tss >> 24);
     gdt.tss.Access = 0x89;
     gdt.tss.Limit2 = 0x40;
-    load_tss(sizeof(gdt_entry_t)*11);
+    load_tss(offsetof(struct gdt, tss));
 }
 
 void tss_set_stack(uint64_t stack, tss_entry_t *tss) {

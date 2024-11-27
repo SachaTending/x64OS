@@ -6,6 +6,9 @@
 #define __BUILD_HOST "unknown"
 #endif
 
+#ifndef __BUILD_TIMESTAMP
+#define __BUILD_TIMESTAMP __DATE__ " " __TIME__
+#endif
 
-const char *compdate = __TIMESTAMP__; // timestamp of kernel
+const char *compdate = __BUILD_TIMESTAMP; // timestamp of kernel
 const char *compmachine = __BUILD_USER "@" __BUILD_HOST;

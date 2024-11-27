@@ -66,13 +66,18 @@ void on_page_fault(idt_regs *regs) {
     printf("\n");
 }
 
-extern "C" void idt_handler2(idt_regs *regs) {
+extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     if (regs->IntNumber == 1024) {
         // Special interrupt, syscall
         syscall_c_entry(regs);
-        return;
+        return regs;
     }
     if (regs->IntNumber < 32) {
+        if (regs->IntNumber == 14) {
+            if (mmap_pf(regs)) {
+                return regs;
+            }
+        }
         printf("OH NO: INT_%u ERR=0x%04x\n", regs->IntNumber, regs->ErrorCode);
         if (regs->IntNumber == 13) {
             printf("Got #GD: ");
@@ -81,7 +86,7 @@ extern "C" void idt_handler2(idt_regs *regs) {
             }
             uint8_t erc = errcode_13_shift & 0b11;
             if (erc == 3) {
-                printf("IDT(0b11)");
+                printf("IDT(0b11)\0");
             } else if (erc == 2) {
                 printf("LDT");
             } else if (erc == 1) {
@@ -91,9 +96,6 @@ extern "C" void idt_handler2(idt_regs *regs) {
             }
             printf(" erc=%u segnment=%u\n", erc, errcode_13_shift >> 2);
         } else if (regs->IntNumber == 14) {
-            if (mmap_pf(regs)) {
-                return;
-            }
             on_page_fault(regs);
         }
         printf("\n");
@@ -109,9 +111,10 @@ extern "C" void idt_handler2(idt_regs *regs) {
         stacktrace(0);
     }
     eoi(regs->IntNumber);
+    return regs;
 }
 
-void idt_set_desc(uint64_t addr, int index, int gtype=0xE) {
+void idt_set_desc(uint64_t addr, int index, int gtype) {
     idt_entry_t *e = &idte[index];
     e->OffsetLow = addr & 0xFFFF;
     e->OffsetHigh = addr >> 16;
@@ -124,7 +127,7 @@ void idt_set_desc(uint64_t addr, int index, int gtype=0xE) {
 
 void idt_set_global_ist(uint8_t ist) {
     for (int i=0;i<256;i++) {
-        if (idte[i].IST != 0) continue;
+        //if (idte[i].IST != 0) continue;
         idte[i].IST = ist;
     }
 }
@@ -145,7 +148,12 @@ static inline void lidt(void* base, uint16_t size)
 }
 void idt_init() {
     for (int i=0;i<256;i++) {
-        idt_set_desc(int_lst[i], i);
+        if (i < 31) {
+            idt_set_desc(int_lst[i], i, 0xE);
+        }
+        else {
+            idt_set_desc(int_lst[i], i, 0xE);
+        }
     }
 	lidt((void *)&idte, sizeof(idte)-1);
 }
