@@ -92,7 +92,7 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
     if (!vmm_map_page(global->shadow_pagemap, virt, phys, pt_flags)) {
         return false;
     }
-    return true;
+    //return true;
     for (size_t i=0;i<global->locals.size();i++) {
         struct mmap_range_local *local_range = global->locals[i];
         if (virt < local_range->base || virt >= local_range->base + local_range->length) {

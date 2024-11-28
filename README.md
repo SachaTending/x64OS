@@ -20,7 +20,8 @@ TODO List:
     - [ ] fat32
     - [ ] tarfs(basicly initrd)
     - [ ] Getting list of files and other stuff
- - [ ] Program loading
+ - [x] Program loading
+ - [x] PCI
  - [ ] Drivers support
  - [ ] Networking
     - [ ] Ethernet

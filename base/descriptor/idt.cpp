@@ -67,17 +67,18 @@ void on_page_fault(idt_regs *regs) {
 }
 
 extern "C" idt_regs *idt_handler2(idt_regs *regs) {
+    if (regs->IntNumber == 14) {
+        //if (mmap_pf(regs)) {
+        if (true) {
+            return regs;
+        }
+    }
     if (regs->IntNumber == 1024) {
         // Special interrupt, syscall
         syscall_c_entry(regs);
         return regs;
     }
     if (regs->IntNumber < 32) {
-        if (regs->IntNumber == 14) {
-            if (mmap_pf(regs)) {
-                return regs;
-            }
-        }
         printf("OH NO: INT_%u ERR=0x%04x\n", regs->IntNumber, regs->ErrorCode);
         if (regs->IntNumber == 13) {
             printf("Got #GD: ");
