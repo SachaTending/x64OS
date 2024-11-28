@@ -13,6 +13,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: mirror-repository
+      uses: yesolutions/mirror-action@v0.7.0
+      with:
+        REMOTE: "https://codeberg.org/TendingStream73/x64OS"
+        GIT_USERNAME: TendingStream73
+        GIT_PASSWORD: ${{ secrets.GIT_PASSWORD }}
     - uses: ilammy/setup-nasm@v1
     - name: download submodules
       run: git submodule init && git submodule update
