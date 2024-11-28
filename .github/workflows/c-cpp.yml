@@ -13,13 +13,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: mirror-repository
-      uses: yesolutions/mirror-action@v0.7.0
-      with:
-        REMOTE: "ssh://git@codeberg.org/TendingStream73/x64OS"
-        GIT_SSH_PRIVATE_KEY: ${{ secrets.GIT_SSH_PRIV_KEY }}
-        GIT_SSH_NO_VERIFY_HOST: "true"
-        GIT_PUSH_ARGS: "--force"
     - uses: ilammy/setup-nasm@v1
     - name: download submodules
       run: git submodule init && git submodule update
