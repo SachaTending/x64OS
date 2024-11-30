@@ -135,6 +135,71 @@ int_common:
 	;swapgs
 ;.a2:
 	iretq ; BUG: Triggers #UD with e=0x0010
+int_common_new:
+    cmpq $0x4b, 16(%rsp) // if user
+    jne 1f
+    swapgs
+
+1:
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push rbp
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    push rbx
+    push rax
+    mov  ax, es
+    push rax
+    mov  ax, dx
+    push rax
+
+    cld
+
+    mov ax, 0x30
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+
+    mov rsi, rsp
+    xor rbp, rbp
+    call int_handler2
+
+    pop rax
+    mov ds,  ax
+    pop rax
+    mov es,  ax
+    pop rax
+    pop rbx
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+    pop rbp
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+    add rsp, 16
+
+    cmp 0x4b, 8(rsp) ; if user
+    jne 1f
+    swapgs
+
+1:
+    iretq
+
 %macro INT 2
 
 global int_%1
