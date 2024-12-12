@@ -81,6 +81,7 @@ void map_vmm(uint64_t addr, size_t count) {
         vmm_map_page(krnl_page, a, a+VMM_HIGHER_HALF, PTE_WRITABLE | PTE_PRESENT);
     }
 }
+extern "C" uint64_t *syscall_stack;
 void pmm_on_vmm_enabled();
 void vmm_setup() {
 #if 1
@@ -158,9 +159,9 @@ void fpu_init() {
 extern "C" {
     void sse_enable(void);
     void syscall_entry(void);
-    void syscall_c_entry(void) {
-        log.info("sysenter called lol\n");
-    }
+    //void syscall_c_entry(void) {
+    //    log.info("sysenter called lol\n");
+    //}
 }
 size_t global_ticks;
 
@@ -191,7 +192,7 @@ int krnl_task() {
     unpack_initrd();
     vfs_node_t *n = vfs_get_node("/hello_world");
     if (n == NULL) {
-        log.info("cannot get file, bruh.\n");
+        //log.info("cannot get file, bruh.\n");
     } else {
         char *buf = new char[1500];
         n->read(n, buf, 150);
@@ -229,7 +230,7 @@ int krnl_task() {
     */
     log.info("Starting /init...\n");
     const char *argv[] = {"init", NULL};
-    const char *envp[] = {NULL};
+    char *envp[] = {NULL};
     exec("/init", 1, argv, envp);
     for(;;) asm volatile ("hlt");
 }
@@ -271,11 +272,12 @@ void Kernel::Main() {
     log.info("Initializing TSS...\n");
     init_tss();
     //for(;;);
-    log.info("Starting scheduler...\n");
-    sched_init();
-    create_task(krnl_task, "task2");
+    sched_init(krnl_task, "Kernel main");
+    //create_task(krnl_task, "task2");
     //create_task(krnl2_task, "task3(should exit)");
     //create_task(test_user_function, "usermode", true);
+    log.info("Starting scheduler...\n");
     start_sched();
-    for(;;);
+    // Call krnl_task, just in case
+    krnl_task();
 }

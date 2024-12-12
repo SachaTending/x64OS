@@ -54,7 +54,7 @@ void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
 
     spinlock_release(&pagemap->lock);
 
-    start_sched();
+    resume_sched();
     return (void *)base;
 }
 
@@ -106,12 +106,16 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
 
     return true;
 }
-
-bool mmap_pf(idt_regs *regs) {
+static inline uint64_t read_cr2(void) {
+    uint64_t ret;
+    asm volatile ("mov %%cr2, %0" : "=r"(ret) :: "memory");
+    return ret;
+}
+bool mmap_pf(cpu_ctx *regs) {
     if ((regs->ErrorCode & 0x1) != 0) {
         return false;
     }
-    uint64_t cr2 = regs->cr2;
+    uint64_t cr2 = read_cr2();
     pagemap *pgm = get_current_task()->pgm;
     spinlock_acquire(&pgm->lock);
 

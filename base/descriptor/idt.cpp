@@ -1,6 +1,9 @@
 #include <stdint.h>
 #include <idt.hpp>
 #include <libc.h>
+#include <logging.hpp>
+
+static Logger log("idt");
 
 typedef struct idt_entry // and again copied code.
 {
@@ -25,13 +28,12 @@ typedef struct idt_entry // and again copied code.
 idt_entry_t idte[256];
 extern "C" uint64_t fetch_cr0(void);
 extern "C" uint64_t fetch_cr3(void);
-void idt_regs_dump(idt_regs *regs) {
+void idt_regs_dump(cpu_ctx *regs) {
     printf("R08: 0x%016lx R09: 0x%016lx R10: 0x%016lx R11: 0x%016lx R12: 0x%016lx R13: 0x%016lx R14: 0x%016lx R15: 0x%016lx\n", regs->r8, regs->r9, regs->r10, regs->r11, regs->r12, regs->r13, regs->r14, regs->r15);
     printf("RIP: 0x%016lx RSP: 0x%016lx RBP: 0x%016lx RAX: 0x%016lx\n", regs->rip, regs->rsp, regs->rbp, regs->rax);
     printf("RBX: 0x%016lx RCX: 0x%016lx RDI: 0x%016lx RDX: 0x%016lx\n", regs->rbx, regs->rcx, regs->rdi, regs->rdx);
     printf("RSI: 0x%016lx RFLAGS: 0x%016lx\n", regs->rsi, regs->rflags);
-    printf("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx FS: 0x%lx GS: 0x%lx\n", regs->cs, regs->ss, regs->ds, regs->es, regs->fs, regs->gs);
-    printf("SFRA: 0x%lx CR2: 0x%lx\n", regs->sfra, regs->cr2);
+    printf("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx\n", regs->cs, regs->ss, regs->ds, regs->es);
     printf("CR0: 0x%lx CR3: 0x%016lx\n", fetch_cr0(), fetch_cr3());
 }
 void stacktrace(uintptr_t *s);
@@ -41,9 +43,9 @@ void lapic_eoi(void);
 void eoi(uint8_t irq);
 #define BIT(b) (1 << b)
 #define errcode_13_shift (regs->ErrorCode >> 1)
-void syscall_c_entry(idt_regs *);
-bool mmap_pf(idt_regs *regs);
-void on_page_fault(idt_regs *regs) {
+extern "C" cpu_ctx *syscall_c_entry(cpu_ctx *);
+bool mmap_pf(cpu_ctx *regs);
+void on_page_fault(cpu_ctx *regs) {
     printf("Got Page fault, flags: ");
     #define is_bit_set(bit) (regs->ErrorCode & BIT(bit))
     if (is_bit_set(0)) {
@@ -65,12 +67,28 @@ void on_page_fault(idt_regs *regs) {
     }
     printf("\n");
 }
+idt_exc_handl idt_excpetion_handler[32];
 
-extern "C" idt_regs *idt_handler2(idt_regs *regs) {
-    if (regs->IntNumber == 14) {
-        //if (mmap_pf(regs)) {
-        if (true) {
-            return regs;
+void idt_register_exception_handler(int vector, idt_exc_handl handl) {
+    printf("int %u = 0x%lx\n", vector, handl);
+    idt_excpetion_handler[vector] = handl;
+}
+void sched_handl(cpu_ctx *regs);
+extern "C" cpu_ctx *idt_handler2(cpu_ctx *regs) {
+    //if (regs->IntNumber != 32) log.debug("Interrupt: %u\n", regs->IntNumber);
+    if (regs->IntNumber < 32) {
+        //printf("before\n");
+        //idt_regs_dump(regs);
+        if (idt_excpetion_handler[regs->IntNumber]) {
+            //printf("handler for int %u exists\n", regs->IntNumber);
+            if (idt_excpetion_handler[regs->IntNumber](regs)) {
+                //printf("after\n");
+                //idt_regs_dump(regs);
+                //sched_handl(regs);
+                return regs;
+            }
+        } else {
+            //printf("handler for int %u does not exists\n", regs->IntNumber);
         }
     }
     if (regs->IntNumber == 1024) {
@@ -102,15 +120,17 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
         printf("\n");
         printf("Registers dump:\n");
         idt_regs_dump(regs);
-        stacktrace(0);
+        stacktrace(regs->rbp);
         for(;;);
     }
+    //printf("int: 0x%x\n", regs->IntNumber);
     if (idt_handls[regs->IntNumber-MAP_BASE]) {
         idt_handls[regs->IntNumber-MAP_BASE](regs);
     } else {
         printf("WARNING: Unknown int %u\n", regs->IntNumber);
         stacktrace(0);
     }
+    sched_handl(regs);
     eoi(regs->IntNumber);
     return regs;
 }
@@ -124,6 +144,10 @@ void idt_set_desc(uint64_t addr, int index, int gtype) {
     e->DPL = 3;
     e->GateType = gtype;
     e->Present = true;
+}
+
+void idt_set_ist(int vector, uint8_t ist) {
+    idte[vector].IST = ist;
 }
 
 void idt_set_global_ist(uint8_t ist) {

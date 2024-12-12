@@ -80,6 +80,7 @@ void init_pci() {
 	pci_size_map[PCI_INTERRUPT_LINE]	= 1;
 	pci_size_map[PCI_SECONDARY_BUS]		= 1;
     pci_dev_t pdev;
+    size_t devices = 0;
     for (uint8_t bus=0;bus<32;bus++) {
         pdev.bus_num = bus;
         for (uint8_t dev=0;dev<DEVICE_PER_BUS;dev++) {
@@ -90,8 +91,10 @@ void init_pci() {
                 uint16_t vendor = pci_read(pdev, PCI_VENDOR_ID);
                 if (vendor == 0xFFFF) continue;
                 uint16_t devid = pci_read(pdev, PCI_DEVICE_ID);
-                log.info("Found device: bus: %u device: %u function: %u vendor: 0x%04x devid: 0x%04x\n", bus, dev, func, vendor, devid);
+                log.debug("Found device: bus: %u device: %u function: %u vendor: 0x%04x devid: 0x%04x\n", bus, dev, func, vendor, devid);
+                devices++;
             }
         }
     }
+    log.info("Found %lu devices\n", devices);
 }

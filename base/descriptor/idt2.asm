@@ -1,10 +1,13 @@
 ; Part of source copied from... boron os, more details in gdt2.asm
 default rel
-section .text
+section .data
+extern syscall_stack
+section .data
 extern idt_handler2
 global fetch_cr0
 global fetch_cr3
 global int_common
+extern syscall_c_entry
 
 fetch_cr0:
 	push rbp
@@ -86,7 +89,7 @@ fetch_cr3:
 %endmacro
 extern malloc
 extern free
-int_common:
+int_common_old_DONT_USE_THIS_PLEASE:
     push  rax
 	push  rbx
 	push  rcx
@@ -136,11 +139,11 @@ int_common:
 ;.a2:
 	iretq ; BUG: Triggers #UD with e=0x0010
 int_common_new:
-    cmpq $0x4b, 16(%rsp) // if user
-    jne 1f
-    swapgs
+    cmp byte [rsp+24], 0x3b ; if user
+    jne .a1
+    ;swapgs
 
-1:
+.a1:
     push r15
     push r14
     push r13
@@ -158,24 +161,28 @@ int_common_new:
     push rax
     mov  ax, es
     push rax
-    mov  ax, dx
+    mov  ax, ds
     push rax
-
+	;cli
     cld
 
     mov ax, 0x30
     mov ds, ax
     mov es, ax
-    mov ss, ax
+    ;mov ss, ax
 
-    mov rsi, rsp
-    xor rbp, rbp
-    call int_handler2
+    ;mov rsi, rsp
+    ;xor rbp, rbp
+	mov rdi, rsp
+	push rdi
+    call idt_handler2
+	pop rax
+	;mov rsp, rax
 
     pop rax
-    mov ds,  ax
+    mov ds,  eax
     pop rax
-    mov es,  ax
+    mov es,  eax
     pop rax
     pop rbx
     pop rcx
@@ -193,11 +200,11 @@ int_common_new:
     pop r15
     add rsp, 16
 
-    cmp 0x4b, 8(rsp) ; if user
-    jne 1f
-    swapgs
+    cmp byte [rsp+8], 0x3b ; if user
+    jne .a2
+    ;swapgs
 
-1:
+.a2:
     iretq
 
 %macro INT 2
@@ -209,56 +216,81 @@ int_%1:
 	push qword 0          ; Push a fake error code
 	%endif
 	push qword 0x%1       ; Push the interrupt number
-	jmp int_common        ; Jump to the common trap handler
+	jmp int_common_new        ; Jump to the common trap handler
 %endmacro
 global syscall_entry
+
 syscall_entry:
 	push qword 0
 	push qword 1024
-	push  rax
-	push  rbx
-	push  rcx
-	push  rdx
-	lea   rbx, [rsp + 32]                  ; Get the pointer to the value after rbx and rax on the stack
-	lea   rcx, [rsp + 48]                  ; Get the pointer to the RIP from the interrupt frame.
-	lea   rdx, [rsp + 56]                  ; Get the pointer to the CS from the interrupt frame.
-	; Note that LEA doesn't actually perform any memory accesses, all it
-	; does it load the address of certain things into a register. We then
-	; defer actually loading those until after DS was changed.
-	; update the segments
-	PUSH_STATE
-	push 0x28           ; code segment
-	lea rax, [rel .a]   ; jump address
-	push rax
-	retfq               ; return far - will go to .a now
-.a:
-	mov   ax, 0x30                         ; Use ring 0 segment for kernel mode use. We have backed the old values up
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
-	mov ss, ax
-	mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
-	mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.
-	mov   rdx, [rdx]                       ; Load CS, to determine the previous mode when entering a hardware interrupt
-	push  rcx                              ; Enter a stack frame so that stack printing doesn't skip over anything
-	push  rbp
-	mov   rbp, rsp
-	cld                                    ; Clear direction flag, will be restored by iretq
-	mov   rdi, rsp                         ; Retrieve the idt_regs to call the trap handler
-	push  rdi							   ; Push pointer to registers
-	call  idt_handler2                     ; And call idt_handler!!
-	;pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
-	mov   rsp, rax                         ; Use the new idt_regs instance as what to pull:
-	pop   rbp                              ; Leave the stack frame
-	pop   rcx                              ; Skip over the RIP duplicate that we pushed
-	POP_STATE                              ; Pop the state
-	pop   rdx                              ; Pop the RDX register
-	pop   rcx                              ; Pop the RCX register
-	pop   rbx                              ; Pop the RBX register
-	pop   rax                              ; Pop the RAX register
-	add   rsp, 16                          ; Pop the interrupt number and the error code
-	o64 sysret
+    cmp byte [rsp+24], 0x3b ; if user
+    jne .a1
+    swapgs
+
+.a1:
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+    push rbp
+    push rdi
+    push rsi
+    push rdx
+    push rcx
+    push rbx
+    push rax
+    mov  ax, es
+    push rax
+    mov  ax, ds
+    push rax
+	cli
+    cld
+
+    mov ax, 0x30
+    mov ds, ax
+    mov es, ax
+    mov ss, ax
+
+    ;mov rsi, rsp
+    ;xor rbp, rbp
+	mov rdi, rsp
+	mov rsp, syscall_stack
+	push rdi
+    call syscall_c_entry
+	pop rax
+	mov rsp, rax
+
+    pop rax
+    mov ds,  eax
+    pop rax
+    mov es,  eax
+    pop rax
+    pop rbx
+    pop rcx
+    pop rdx
+    pop rsi
+    pop rdi
+    pop rbp
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+    add rsp, 16
+
+    cmp byte [rsp+8], 0x3b ; if user
+    jne .a2
+    swapgs
+
+.a2:
+    o64 sysret
 
 %include "base/descriptor/intlist.asm"
 

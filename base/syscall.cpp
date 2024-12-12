@@ -32,8 +32,12 @@ void sys_print(const char *txt, uint64_t len) {
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
 }
 uint8_t ps2_recv_dev();
-void int80(idt_regs *regs) {
-    log.debug("SYSCALL: %u\n", regs->rax);
+
+__attribute__((section(".data"))) extern "C" {
+    __attribute__((section(".data")))  void *syscall_stack = 0;
+}
+void int80(cpu_ctx *regs) {
+    //log.debug("SYSCALL: %u\n", regs->rax);
     switch (regs->rax)
     {
         case 0:
@@ -65,11 +69,12 @@ void int80(idt_regs *regs) {
     }
 }
 
-void syscall_c_entry(idt_regs *regs) {
+extern "C" cpu_ctx *syscall_c_entry(cpu_ctx *regs) {
     //printf("SYSCALL: %u\n", regs->rax);
     int80(regs);
+    return regs;
 }
-
+bool mmap_pf(cpu_ctx *regs);
 extern "C" void syscall_entry(void);
 __attribute__((constructor)) void init_syscall() {
     idt_set_int(0x80-MAP_BASE, int80);
@@ -77,9 +82,13 @@ __attribute__((constructor)) void init_syscall() {
     //wrmsr(0x176, (uint64_t)syscall_entry);
     // Enable syscall extensions
     wrmsr(0xc0000080, rdmsr(0xc0000080) | 1);
-    wrmsr(0xc0000081, (((6*8)-16) >> 48  ));
+    wrmsr(0xc0000081, (((6*8)-16) >> 48 | (0x28 >> 32)));
     wrmsr(0xC0000082, (uint64_t)syscall_entry);
     wrmsr(0xC0000100, 0xff);
     wrmsr(0xC0000101, 0xff);
     wrmsr(0xC0000102, 0xff);
+    // Register mmap page fault handler as int exception handler
+    syscall_stack = malloc(128*1024)+128*1024;
+    idt_register_exception_handler(14, mmap_pf);
+    printf("amogus\n");
 }

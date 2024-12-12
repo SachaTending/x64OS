@@ -98,8 +98,8 @@ size_t mgmt_syscall_open(const char *path) {
 
 void *mgmt_mmap(uintptr_t hint, size_t length, uint64_t flags, int fdnum, size_t offset) {
     vfs_node_t *node;
-    log.debug("mmap: hint: 0x%lx, length: %lu, flags: %lu, fdnum: %d, offset: %lu, prot: %lu, flags(real): %lu\n", hint, length, flags, fdnum, offset,
-        (int)flags >> 32, flags & 0xffffffff);
+    //log.debug("mmap: hint: 0x%lx, length: %lu, flags: %lu, fdnum: %d, offset: %lu, prot: %lu, flags(real): %lu\n", hint, length, flags, fdnum, offset,
+    //    (int)flags >> 32, flags & 0xffffffff);
     if (fdnum != -1) {
         node = mgmt_find_handle(fdnum)->node;
     }

@@ -55,7 +55,7 @@ void Logger::error(const char *msg, ...) {
 void Logger::debug(const char *msg, ...) {
     pre_log();
     print_debug = 1;
-    printf("\e[34m[DEBUG][%lu][%u][%s]: ", used_ram, TICK, this->name);
+    printf("\e[34m[DEBUG][%lu][%s]: ",  TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf_(msg, lst);

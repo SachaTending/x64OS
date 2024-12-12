@@ -59,10 +59,12 @@ struct cpu_ctx {
     uint64_t rflags;
     uint64_t rsp;
     uint64_t ss;
-};
+} __attribute__((packed));
 
-typedef void (*idt_handl)(idt_regs *regs);
+typedef void (*idt_handl)(cpu_ctx *regs);
+typedef bool (*idt_exc_handl)(cpu_ctx *regs);
 
 void idt_set_int(uint64_t vec, idt_handl handl);
+void idt_register_exception_handler(int vector, idt_exc_handl handl);
 
 #define MAP_BASE 32

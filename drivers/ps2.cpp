@@ -84,7 +84,7 @@ uint8_t ps2_recv_dev() {
     return _ps2_data_1;
 }
 
-void ps2_int_1(idt_regs *regs) {
+void ps2_int_1(cpu_ctx *regs) {
     (void)regs;
     _ps2_data_1 = inb(0x60);
     _ps2_data_1_received = true;

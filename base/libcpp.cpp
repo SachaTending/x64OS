@@ -4,7 +4,7 @@
 
 static Logger log("libcpp");
 
-#define DEBUG_LIBCPP
+#define DEBUG_LIBCPP2
 
 #ifdef DEBUG_LIBCPP
 #define debug(...) log.debug(__VA_ARGS__)

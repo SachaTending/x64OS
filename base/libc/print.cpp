@@ -187,7 +187,7 @@ void putchar(char c) {
     outb(0xe9, c);
     #endif
     #ifndef E9_HACK
-    while ((inb(0x3f8 + 5) & 0x20) == 0);
+    //while ((inb(0x3f8 + 5) & 0x20) == 0);
     outb(0x3f8, c);
     #endif
     if (c == '\e') {

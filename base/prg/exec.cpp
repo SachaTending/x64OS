@@ -38,11 +38,11 @@ int exec(const char *path, int argc, char **argv, char **envp) {
         printf("ret=%u\n", ret);
         delete pgm->top_level;
         delete pgm;
-        start_sched();
+        resume_sched();
         return -1;
     }
     // TODO: Add linker loading
     create_task((task_entry_t)entry, path, true, pgm, tls, argc, argv, envp, aux);
-    start_sched();
+    resume_sched();
     return 0;
 }

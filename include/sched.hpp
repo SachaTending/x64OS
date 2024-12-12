@@ -12,8 +12,9 @@ struct auxval {
     uint64_t at_phnum;
 };
 
-void sched_init();
+void sched_init(int (*task)(), const char *name);
 void start_sched();
+void resume_sched();
 void stop_sched();
 void create_task(int (*task)(), 
     const char *name, 
@@ -28,7 +29,7 @@ void create_task(int (*task)(),
 int getpid();
 void sched_kill_pid(int pid);
 
-void sched_handl(idt_regs *regs);
+void sched_handl(cpu_ctx *regs);
 
 enum TASK_STATE {
     TASK_CREATE, // task creating
@@ -39,7 +40,7 @@ enum TASK_STATE {
 
 typedef struct task {
     struct task *next;
-    idt_regs regs;
+    cpu_ctx regs;
     const char *name;
     enum TASK_STATE state;
     size_t pid;
