@@ -1,2 +1,0 @@
-option('frigg_no_install', type : 'boolean', value : false)
-option('build_tests', type : 'feature', value : 'auto')

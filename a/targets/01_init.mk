@@ -1,1 +1,0 @@
-OBJ += init/entry.o init/os_entry.o
