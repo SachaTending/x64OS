@@ -1,0 +1,107 @@
+#include <idt.hpp>
+#include <sched.hpp>
+#include <logging.hpp>
+#include <printf/printf.h>
+#include <msr.h>
+#include <libc.h>
+#include <sys/syscall.h>
+#include <sched.hpp>
+#include <vfs.hpp>
+#include <frg/std_compat.hpp>
+#include <frg/vector.hpp>
+#include <new>
+
+struct proc_handle {
+    size_t id;
+    vfs_node_t *node;
+};
+
+typedef frg::vector<proc_handle *, frg::stl_allocator> proc_handles_t;
+
+struct proc_info {
+    size_t pid;
+    proc_handles_t *handles;
+};
+
+static Logger log("Syscall handler");
+size_t mgmt_syscall_open(const char *path);
+size_t mgmt_syscall_read(size_t handle, void *buf, size_t count);
+void mgmt_syscall_write(size_t handle, void *buf, size_t count);
+void *mgmt_mmap(uintptr_t hint, size_t length, uint64_t flags, int fdnum, size_t offset);
+int mgmt_set_tcb(void *ptr);
+void mgmt_syscall_getcwd(char *buffer, size_t len);
+size_t mgmt_syscall_seek(size_t handle, size_t seek_pos, int whence);
+void sys_print(const char *txt, uint64_t len) {
+    printf("");
+    for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
+}
+uint8_t ps2_recv_dev();
+void int80(idt_regs *regs, void *_) {
+    (void)_;
+    //log.debug("SYSCALL: %u\n", regs->rax);
+    switch (regs->rax)
+    {
+        case 0:
+            regs->rax = mgmt_syscall_read(regs->rdi, (void *)regs->rsi, (size_t)regs->rdx);
+            break;
+        case 1:
+            regs->rax = 0;
+            mgmt_syscall_write(regs->rdi, (void *)regs->rsi, regs->rdx);
+            break;
+        case 2:
+            regs->rax = mgmt_syscall_open((const char *)regs->rdi);
+            break;
+        case 4:
+            regs->rax = (uint64_t)mgmt_mmap(regs->rdi, regs->rsi, regs->rdx, regs->r8, regs->r9);
+            break;
+        case 7: // Set tcb
+            regs->rax = mgmt_set_tcb((void *)regs->rdi);
+            break;
+        case 8:
+            regs->rax = 0;
+            mgmt_syscall_getcwd((char *)regs->rdi, (size_t)regs->rsi);
+            break;
+        case 9:
+            regs->rax = mgmt_syscall_seek((size_t)regs->rdi, (size_t)regs->rsi, (int)regs->rdx);
+            break;
+        case 39:
+            regs->rax = getpid();
+            break;
+        case 60: // exit
+            sched_kill_pid(getpid());
+            break;
+        case 512:
+            //printf("debug from process: %s\n", regs->rdi);
+            printf("debug: %s\n", regs->rdi);
+            break;
+        default:
+            log.debug("unknown syscall: %u\n", regs->rax);
+            break;
+    }
+    //regs->cs = 8*8 | 3;
+    //regs->ss = 7*8 | 3;
+}
+
+extern "C" void syscall_c_entry(idt_regs *regs) {
+    //printf("SYSCALL: %u\n", regs->rax);
+    int80(regs, nullptr);
+    //regs->cs = (8*8) | 3;
+    //regs->ss = (7*8) | 3;
+}
+
+extern "C" void syscall_entry(void);
+__attribute__((constructor)) void init_syscall() {
+    idt_set_int(0x80-MAP_BASE, int80);
+    //wrmsr(0x174, 28);
+    //wrmsr(0x176, (uint64_t)syscall_entry);
+    // Enable syscall extensions
+    wrmsr(0xc0000080, rdmsr(0xc0000080) | 1);
+    uint64_t a = ((uint64_t)6*8) << 48;
+    a |= (uint64_t)((uint64_t)0x28 << 32);
+    wrmsr(0xc0000081, a);
+    //printf("msr 0xc0000081 = 0x%lx", a);
+    wrmsr(0xC0000082, (uint64_t)syscall_entry);
+    wrmsr(0xC0000100, 0xff);
+    wrmsr(0xc0000100, 0xff);
+    wrmsr(0xC0000102, 0xff);
+}
