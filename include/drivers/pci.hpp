@@ -39,4 +39,24 @@ typedef union pci_dev {
 #define PCI_SECONDARY_BUS        0x09
 
 #define DEVICE_PER_BUS           32
-#define FUNCTION_PER_DEVICE      32
+#define FUNCTION_PER_DEVICE      8
+
+typedef struct pci_id {
+    uint16_t vendor_id, dev_id;
+} pci_id_t;
+
+typedef bool (*pci_prode_f)(struct pci_driver *, pci_dev_t *dev);
+typedef void * (*pci_init_f)(struct pci_driver *, pci_dev_t *dev);
+
+typedef struct pci_driver {
+    pci_id_t *supported_ids;
+    const char *name;
+    pci_prode_f probe;
+    pci_init_f init;
+    void *priv;
+} pci_driver_t;
+
+void pci_register_driver(pci_driver_t *driver);
+uint32_t pci_read(pci_dev_t dev, uint32_t field);
+uint64_t pci_get_bar(int bar, pci_dev_t *dev);
+void pci_write(pci_dev_t dev, uint32_t field, uint32_t value);

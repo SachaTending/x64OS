@@ -7,6 +7,7 @@
 #include <logging.hpp>
 #include <cpu.h>
 #include <elf.h>
+#include <msr.h>
 
 static Logger log("Scheduler");
 
@@ -29,22 +30,21 @@ int getpid() {
     return current_task->pid;
 }
 void mgmt_on_new_program(size_t pid);
-void sched_init(int (*task)(), const char *name) {
+void sched_init() {
     root_task = new task_t;
     root_task->regs.rip = (uint64_t)task_entry;
-    root_task->regs.rax = (uint64_t)task;
+    root_task->regs.rax = (uint64_t)dummy_task;
     root_task->next = root_task;
-    root_task->name = strdup(name);
+    root_task->name = strdup("Dummy task");
     root_task->pid = next_pid;
     root_task->last_task = true;
     root_task->pgm = krnl_page;
-    root_task->regs.cs = 5*8 | 0;
-    root_task->regs.es = root_task->regs.ds = root_task->regs.ss = 6*8 | 0;
     next_pid++;
     root_task->stack_addr = malloc(64*1024);
     root_task->regs.rsp = ((uint64_t)root_task->stack_addr)+64*1024;
     current_task = root_task;
     root_task->state = TASK_READY;
+    root_task->usermode = false;
     mgmt_on_new_program(root_task->pid);
 }
 
@@ -90,13 +90,13 @@ void sched_kill_pid(int pid) {
     }
     task->state = TASK_ZOMBIE;
     log.debug("Task %d's state switched to TASK_ZOMBIE\n", pid);
-    resume_sched();
+    start_sched();
 }
 
 spinlock_t sched_lock = SPINLOCK_INIT;
-#define STACK_SIZE 256*1024
+#define STACK_SIZE 128*1024
 bool _sched_stop_internal = false;
-void create_task(int (*task)(), 
+volatile void create_task(int (*task)(), 
     const char *name, 
     bool usermode=false, 
     pagemap *pgm=krnl_page, 
@@ -119,11 +119,16 @@ void create_task(int (*task)(),
     new_task->mmap_anon_base = 0x80000000000;
     //new_task->regs.rflags = 0x202;
     new_task->regs.rflags |= (1 << 9);
-    uintptr_t *stack;
+    volatile uintptr_t *stack;
+    new_task->usermode = usermode;
+    //#define stack (new_task->regs.rsp)
     if (usermode == true) {
         new_task->regs.rip = (uint64_t)task;
+        new_task->regs.rax = 0;
         //new_task->regs.rcx = (uint64_t)task;
-        new_task->regs.ds = new_task->regs.es = new_task->regs.ss = (7*8) | 3;
+        //new_task->regs.ds = new_task->regs.es = new_task->regs.ss = (7*8) | 3;
+        new_task->regs.ss = (7*8) | 3;
+        new_task->regs.es = new_task->regs.ds = (7*8);
         new_task->regs.cs = (8*8) | 3;
         uint64_t rsp = (uint64_t)pmm_alloc(STACK_SIZE/4096);
         new_task->stack_addr = (void *)rsp;
@@ -131,20 +136,25 @@ void create_task(int (*task)(),
         //vmm_map_range(pgm, (uint64_t)task_entry-VMM_HIGHER_HALF, 8192, PTE_PRESENT | PTE_USER);
         new_task->regs.rsp = (rsp+STACK_SIZE);
         if (argc != NULL && argv != NULL && envp != NULL && aux != NULL) {
+            //vmm_switch_to(pgm);
+            printf("pushing argc, argv, envp, aux...\n");
+            printf("rsp: 0x%lx\n", new_task->regs.rsp);
             stack = (uintptr_t *)new_task->regs.rsp;
-            void *stack_top = stack;
+            void *stack_top = new_task->stack_addr+STACK_SIZE;
             int envp_len;
             for (envp_len = 0; envp[envp_len] != NULL; envp_len += 1) {
                 size_t len = strlen(envp[envp_len]);
                 stack = (uintptr_t *)((uint64_t)stack - len - 1);
                 memcpy((void *)stack, envp[envp_len], len);
+                printf("pushed env: %s\n", envp[envp_len]);
             }
 
             int argv_len;
             for (argv_len = 0; argv[argv_len] != NULL; argv_len++) {
                 size_t len = strlen(argv[argv_len]);
                 stack = (uintptr_t *)((uint64_t)stack - len - 1);
-                memcpy(stack, argv[argv_len], len);
+                memcpy((void *)stack, argv[argv_len], len);
+                printf("pushed arg: %s\n", argv[argv_len]);
             }
 
             stack = (uintptr_t *)ALIGN_DOWN((uintptr_t)stack, 16);
@@ -156,6 +166,7 @@ void create_task(int (*task)(),
             *(--stack) = 0, *(--stack) = 0;
             stack -= 2; stack[0] = AT_SECURE, stack[1] = 0;
             stack -= 2; stack[0] = AT_ENTRY, stack[1] = aux->at_entry;
+            printf("at_entry=0x%lx\n", aux->at_entry);
             stack -= 2; stack[0] = AT_PHDR,  stack[1] = aux->at_phdr;
             stack -= 2; stack[0] = AT_PHENT, stack[1] = aux->at_phent;
             stack -= 2; stack[0] = AT_PHNUM, stack[1] = aux->at_phnum;
@@ -176,18 +187,21 @@ void create_task(int (*task)(),
                 old_rsp -= strlen(argv[i]) + 1;
                 stack[i] = old_rsp;
             }
-
+            printf("stack: 0x%lx\n", stack);
             *(--stack) = argv_len;
-
-            new_task->regs.rsp -= (uint64_t)stack_top - (uint64_t)stack;
+            printf("argv_len: %lu\n", argv_len);
+            printf("pushed: %lu\n", *stack);
+            //*(--stack) = (uint64_t)stack;
+            //new_task->regs.rdi = (uint64_t)stack;
+            new_task->regs.rsp = (uint64_t)stack;
+            //new_task->regs.rsp -= (uint64_t)stack_top - (uint64_t)stack;
+            printf("rsp: 0x%lx\n", new_task->regs.rsp);
         }
     } else {
         new_task->stack_addr = ((void *)pmm_alloc(STACK_SIZE/4096));
         new_task->regs.rsp = ((uint64_t)new_task->stack_addr)+STACK_SIZE+VMM_HIGHER_HALF;
-        new_task->regs.cs = 5*8;
-        new_task->regs.ds = new_task->regs.es = new_task->regs.ss = 6*8;
     }
-    memset(new_task->stack_addr, 0, STACK_SIZE);
+    //memset(new_task->stack_addr, 0, STACK_SIZE);
     task_t *task_p = root_task;
     do {
         task_p = task_p->next;
@@ -204,13 +218,13 @@ void create_task(int (*task)(),
     //log.debug("Task with name %s created, entrypoint: 0x%lx, usermode: %d, pagemap: 0x%lx, pid: %d\n", name, task, usermode, pgm, new_task->pid);
 }
 
-void save_regs(cpu_ctx *regs) {
+void save_regs(idt_regs *regs) {
     // Save registers
-    memcpy(&current_task->regs, regs, sizeof(cpu_ctx));
+    memcpy(&current_task->regs, regs, sizeof(idt_regs));
 }
 
-void load_regs(task_t *src, cpu_ctx *regs) {
-    memcpy(regs, &src->regs, sizeof(cpu_ctx));
+void load_regs(task_t *src, idt_regs *regs) {
+    memcpy(regs, &src->regs, sizeof(idt_regs));
 }
 
 task_t *find_prev_task(task_t *task) {
@@ -239,17 +253,20 @@ task_t *sched_kill_task_by_state(task_t *task) {
     }
     return ntask;
 }
-void sched_handl(cpu_ctx *regs) {
+void sched_handl(idt_regs *regs) {
     if (SCHED_STOP) return; // scheduler stopped
     if (_sched_stop_internal) return; // another flag
     if (!SCHED_READY) return;
     if (!SCHED_STARTED) {
-        //if (root_task->regs.cs == 0) {
-        //    root_task->regs.cs = 0x28;
-        //    root_task->regs.es = 0x30;
-        //    root_task->regs.ds = 0x30;
-        //    root_task->regs.ss = 0x30;
-        //}
+        root_task->regs.cr2 = regs->cr2;
+        if (root_task->regs.cs == 0) {
+            root_task->regs.cs = regs->cs;
+            root_task->regs.es = regs->es;
+            //root_task->regs.fs = root_task->tls;
+            root_task->regs.gs = regs->gs;
+            root_task->regs.ds = regs->ds;
+            root_task->regs.ss = regs->ss;
+        }
         root_task->regs.rflags |= (1 << 9);
         SCHED_STARTED = true;
     }
@@ -263,20 +280,27 @@ void sched_handl(cpu_ctx *regs) {
         ntask = current_task->next;
     }
     //ntask = sched_kill_task_by_state(ntask);
+    ntask->regs.cr2 = regs->cr2;
     vmm_switch_to(ntask->pgm);
-    //if (ntask->regs.cs == 0) {
-    //    ntask->regs.cs = 0x28;
-    //    ntask->regs.es = 0x30;
-    //    ntask->regs.ds = 0x30;
-    //    ntask->regs.ss = 0x30;
-    //}
-    //log.debug("next rip=0x%lx\n", regs->rip);
+    if (ntask->regs.cs == 0) {
+        ntask->regs.cs = regs->cs;
+        ntask->regs.es = regs->es;
+        ntask->regs.fs = ntask->tls;
+        ntask->regs.gs = regs->gs;
+        ntask->regs.ds = regs->ds;
+        ntask->regs.ss = regs->ss;
+    }
     //ntask->regs.gs = regs->gs;
-    if (ntask->next != ntask )load_regs(ntask, regs);
-    //wrmsr(0xC0000100, ntask->tls);
+    if (ntask)
+    load_regs(ntask, regs);
+    if (ntask->usermode) {
+        wrmsr(0xc0000100, ntask->tls);
+        //log.debug("task %s(%u), msr 0xC0000100: 0x%lx\n", ntask->name, ntask->pid, rdmsr(0xC0000100));
+    }
     ntask->state = TASK_RUNNING;
+    regs->fs = ntask->tls;
     //regs->rflags |= (1 << 9);
     current_task = ntask;
+    //if (current_task->usermode == true) log.debug("%u rsp: 0x%lx\n", current_task->pid, current_task->regs.rsp);
     //log.debug("Switched to task %s, pid: %d, RIP: 0x%lx\n", current_task->name, current_task->pid, current_task->regs.rip);
-    return;
 }

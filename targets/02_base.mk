@@ -15,6 +15,8 @@ OBJ += $(addprefix base/, \
 	tss.o \
 	cpuid.o \
 	proc_mgmt.o \
+	debug_console.o \
+	modules.o \
 )
 
 base/compinfo.o:

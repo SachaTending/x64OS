@@ -3,6 +3,9 @@
 #include <frg/vector.hpp>
 #include <frg/std_compat.hpp>
 #include <new>
+#include <logging.hpp>
+
+static Logger log("tmpfs");
 
 struct tmpfs_file {
     const char *fpath;
@@ -37,12 +40,15 @@ void tmpfs_umount(vfs_mnt_t *mnt) {
 }
 
 int tmpfs_read(vfs_node_t *node, void *buf, size_t len) {
+    log.debug("tmpfs_read(0x%lx, 0x%lx, %lu);\n", node, buf, len);
     tmpfs_node *node2 = (tmpfs_node *)node->data;
     if (node2->file->size == 0 or node2->file->is_dir == true) return 0;
     while ((node->seek_pos + len) > node2->file->size) {
         len--;
     }
     memcpy(buf, node2->file->data+node->seek_pos, len);
+    node->seek_pos += len;
+    log.debug("seek_pos: %lu\n", node->seek_pos);
     return len;
 }
 
@@ -142,6 +148,7 @@ vfs_node_t *tmpfs_get_file(struct vfs_mnt *mnt, const char *path) {
             return n;
         }
     }
+    log.debug("get_file(%s) = NULL(not found.)\n", path);
     return NULL; // no file found
 }
 

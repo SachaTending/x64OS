@@ -21,6 +21,10 @@ Logger::Logger(const char *name) {
 extern size_t global_ticks;
 #define TICK global_ticks
 void resume_sched();
+extern uint64_t used_pages;
+static size_t get_used_ram() {
+    return used_ram;
+}
 void pre_log() {
     //asm volatile ("cld");
     stop_sched();
@@ -33,7 +37,7 @@ void post_log() {
 
 void Logger::info(const char *msg, ...) {
     pre_log();
-    printf("\e[97m[INFO][%lu][%u][%s]: ", used_ram, TICK, this->name);
+    printf("\e[97m[INFO][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf_(msg, lst);
@@ -43,7 +47,7 @@ void Logger::info(const char *msg, ...) {
 
 void Logger::error(const char *msg, ...) {
     pre_log();
-    printf("\e[31m[ERROR][%lu][%u][%s]: ", used_ram, TICK, this->name);
+    printf("\e[31m[ERROR][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf_(msg, lst);
@@ -55,7 +59,7 @@ void Logger::error(const char *msg, ...) {
 void Logger::debug(const char *msg, ...) {
     pre_log();
     print_debug = 1;
-    printf("\e[34m[DEBUG][%lu][%s]: ",  TICK, this->name);
+    printf("\e[34m[DEBUG][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf_(msg, lst);

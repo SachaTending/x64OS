@@ -5,12 +5,26 @@
 #include <libc.h>
 #include <new>
 #include <vfs.hpp>
+#include <logging.hpp>
+
+static Logger log("VFS");
 
 typedef frg::vector<uintptr_t, frg::stl_allocator> vfs_vec;
+typedef frg::vector<vfs_fs_t *, frg::stl_allocator> vfs_fs_vec;
 
 #define vec_get(ind) ((vfs_mnt_t *)vec[ind])
 
 vfs_vec vec = vfs_vec();
+vfs_fs_vec fs_vec = vfs_fs_vec();
+
+int vfs_mount_by_name(const char *block, const char *mnt_path, const char *fs_name) {
+    for (size_t i=0;i<fs_vec.size();i++) {
+        if (!strcmp(fs_vec[i]->name, fs_name)) {
+            return vfs_mount(block, mnt_path, fs_vec[i]);
+        }
+    }
+    return VFS_INVALID_FS;
+}
 
 int vfs_mount(const char *block, const char *mnt_path, vfs_fs_t *fs) {
     if (!fs && !block && mnt_path) {
@@ -18,6 +32,17 @@ int vfs_mount(const char *block, const char *mnt_path, vfs_fs_t *fs) {
     }
     if (!fs->probe_fs(fs, block)) {
         return VFS_INVALID_BLOCK; // fs probe failed
+    }
+    // Check if mnt_path exists
+    vfs_stat_t *_t = vfs_stat(mnt_path);
+    if (!_t) {
+        if (strlen(mnt_path) != 1) { 
+            log.debug("tried to mount %s on %s, but %s doesn't exists, _t=0x%lx.\n", fs->name, mnt_path, mnt_path, _t);
+            return VFS_FILE_NOT_FOUND; // mnt_path not found
+        }
+    }
+    else {
+        delete _t;
     }
     for (size_t ind=0;ind<vec.size();ind++) {
         if (strlen(mnt_path) == strlen((vec_get(ind))->path)) {
@@ -52,15 +77,22 @@ vfs_node_t *vfs_get_node(const char *path) {
     AUTOCORRECT_PATH(path);
     vfs_mnt_t *mnt = vfs_get_mnt(path);
     if (mnt == NULL) {
-        printf("vfs: no mnt for %s found\n", path);
+        log.debug("vfs_get_node(%s) = NULL(bcz no mnt found)\n", path);
+        //printf("vfs: no mnt for %s found\n", path);
         return NULL;
     }
     size_t plen = strlen(mnt->path);
-    vfs_node_t *node = mnt->get_file(mnt, path+plen-1);
+    log.debug("mnt->path(%s) length = %lu, path+plen=%s\n", mnt->path, plen, path+plen);
+    if (plen == 1) {
+        plen -= 1;
+    }
+    vfs_node_t *node = mnt->get_file(mnt, path+plen);
+    log.debug("vfs_get_node(%s) = 0x%lx\n", path, node);
     return node;
 }
 
 vfs_node_t *vfs_create_file(const char *path, bool is_dir) {
+    log.debug("create_file(%s, %d)\n", path, is_dir);
     AUTOCORRECT_PATH(path);
     vfs_mnt_t *mnt = vfs_get_mnt(path);
     if (mnt == NULL) {
@@ -78,6 +110,11 @@ vfs_stat_t *vfs_stat(const char *path) {
         return NULL;
     }
     return mnt->stat(mnt, path+strlen(mnt->path)-1);
+}
+
+void vfs_register_fs(vfs_fs_t *fs) {
+    fs_vec.push(fs);
+    log.debug("registered fs: %s\n", fs->name);
 }
 
 void vfs_init() {

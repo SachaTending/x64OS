@@ -43,6 +43,9 @@ SECTIONS
         KEEP(*( .init_array ));
         KEEP(*(SORT_BY_INIT_PRIORITY( .init_array.* )));
         end_ctors = .;
+        start_start_on_init = .;
+        KEEP(*( .start_on_init ));
+        end_start_on_init = .;
         *(.data .data.*)
     } :data
 

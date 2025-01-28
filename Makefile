@@ -42,6 +42,8 @@ override LDFLAGS += \
 # Internal nasm flags that should not be changed by the user.
 override NASMFLAGS += -f elf64 -g
 
+C++ = g++
+
 all: build
 OBJ = 
 INCLUDES = 
@@ -56,7 +58,7 @@ build: image.iso
 
 %.o: %.cpp
 	@echo "  [ CPP] $@"
-	@$(CC) $(CPPFLAGS) -o $@ $< $(INCLUDES)
+	@$(C++) $(CPPFLAGS) -o $@ $< $(INCLUDES)
 
 %.o: %.S
 	@echo "  [  AS] $@"

@@ -187,65 +187,10 @@ void putchar(char c) {
     outb(0xe9, c);
     #endif
     #ifndef E9_HACK
-    //while ((inb(0x3f8 + 5) & 0x20) == 0);
+    while ((inb(0x3f8 + 5) & 0x20) == 0);
     outb(0x3f8, c);
     #endif
-    if (c == '\e') {
-        escStart = true;
-    } else if (escStart && etype == NO_ESC) {
-        switch (c)
-        {
-            case '[':
-                etype = TERM_COLOR;
-                break;
-            
-            default:
-                break;
-        }
-    } else if (escStart) {
-        switch (etype)
-        {
-            case TERM_COLOR:
-                if (c == 'm') {
-                    escStart = false;
-                    etype = NO_ESC;
-                    if (etc_got_fg) { // etc_fg already set
-                        etc_bg = atoi((char *)&etc_tmp);
-                    } else {
-                        etc_fg = atoi((char *)&etc_tmp);
-                    }
-                    if (etc_bg) {
-                        etc_bg = 0;
-                    }
-                    if (etc_fg) {
-                        if (etc_fg <= 97 && etc_fg >= 30) {
-                            ssfn_set_fg(etc_lookup_fg[etc_fg-30]);
-                        }
-                        etc_fg = 0;
-                    }
-                    etc_got_fg = false;
-
-                    etc_tmp_pos = 0;
-                    memset((void *)&etc_tmp, 0, sizeof(etc_tmp));
-                } else if (c == ';') {
-                    etc_got_fg = true;
-                    etc_tmp_pos = 0;
-                    memset((void *)&etc_tmp, 0, sizeof(etc_tmp));
-                } else {
-                    etc_tmp[etc_tmp_pos] = c;
-                    etc_tmp_pos++;
-                    if (etc_tmp_pos >= 10) {
-                        etc_tmp_pos = 0;
-                        memset((void *)&etc_tmp, 0, sizeof(etc_tmp));
-                    }
-                }
-                break;
-            
-            default:
-                break;
-        }
-    }
-    else if (!print_debug) ssfn_putc2((uint32_t)c);
+    if (!print_debug) ssfn_putc2((uint32_t)c);
 }
 extern "C" void putchar_(char c) {
     putchar(c);

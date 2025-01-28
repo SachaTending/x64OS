@@ -38,22 +38,23 @@ static inline uint8_t inb(uint16_t port)
     return ret;
 }
 
-static inline uint16_t inw(uint16_t port)
-{
-    uint16_t ret;
-    __asm__ volatile ( "inw %w1, %w0"
-                   : "=a"(ret)
-                   : "Nd"(port)
-                   : "memory");
-    return ret;
+static inline uint16_t inw(uint16_t port) {
+    uint16_t value;
+    asm volatile (
+        "inw %1, %0\n\t"
+        : "=a" (value)
+        : "Nd" (port)
+        : "memory"
+    );
+    return value;
 }
 
 static inline uint32_t ind(uint16_t port)
 {
     uint32_t ret;
-    __asm__ volatile ( "inl %1, %0"
+    __asm__ volatile ( "inl %%dx, %%eax"
                    : "=a"(ret)
-                   : "Nd"(port)
+                   : "dN"(port)
                    : "memory");
     return ret;
 }

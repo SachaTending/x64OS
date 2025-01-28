@@ -4,6 +4,9 @@
 #include <libc.h>
 #include <sched.hpp>
 #include <idt.hpp>
+#include <logging.hpp>
+
+static Logger log("mmap");
 
 void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
            int flags, vfs_node_t *node, size_t offset) {
@@ -55,6 +58,7 @@ void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
     spinlock_release(&pagemap->lock);
 
     resume_sched();
+    log.debug("mmap ret=0x%lx\n", base);
     return (void *)base;
 }
 
@@ -106,16 +110,15 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
 
     return true;
 }
-static inline uint64_t read_cr2(void) {
-    uint64_t ret;
-    asm volatile ("mov %%cr2, %0" : "=r"(ret) :: "memory");
-    return ret;
-}
-bool mmap_pf(cpu_ctx *regs) {
-    if ((regs->ErrorCode & 0x1) != 0) {
+
+bool mmap_pf(idt_regs *regs) {
+    //if ((regs->ErrorCode & 0x1) != 0) {
+    if (false) {
         return false;
     }
-    uint64_t cr2 = read_cr2();
+
+    uint64_t cr2 = regs->cr2;
+
     pagemap *pgm = get_current_task()->pgm;
     spinlock_acquire(&pgm->lock);
 
@@ -140,5 +143,7 @@ bool mmap_pf(cpu_ctx *regs) {
     if (page == NULL) {
         return false;
     }
-    return mmap_page_in_range(local_range->global, range.memory_page * PAGE_SIZE, (uintptr_t)page, local_range->prot);
+    bool ret = mmap_page_in_range(local_range->global, range.memory_page * PAGE_SIZE, (uintptr_t)page, local_range->prot);
+
+    return ret;
 }

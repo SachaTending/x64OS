@@ -12,11 +12,11 @@ struct auxval {
     uint64_t at_phnum;
 };
 
-void sched_init(int (*task)(), const char *name);
+void sched_init();
 void start_sched();
 void resume_sched();
 void stop_sched();
-void create_task(int (*task)(), 
+volatile void create_task(int (*task)(), 
     const char *name, 
     bool usermode=false, 
     pagemap *pgm=krnl_page, 
@@ -29,7 +29,7 @@ void create_task(int (*task)(),
 int getpid();
 void sched_kill_pid(int pid);
 
-void sched_handl(cpu_ctx *regs);
+void sched_handl(idt_regs *regs);
 
 enum TASK_STATE {
     TASK_CREATE, // task creating
@@ -40,7 +40,7 @@ enum TASK_STATE {
 
 typedef struct task {
     struct task *next;
-    cpu_ctx regs;
+    idt_regs regs;
     const char *name;
     enum TASK_STATE state;
     size_t pid;
@@ -49,6 +49,7 @@ typedef struct task {
     void *stack_addr;
     uint64_t tls;
     uintptr_t mmap_anon_base;
+    bool usermode;
 } task_t;
 
 extern task_t *root_task, *current_task;

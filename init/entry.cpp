@@ -143,6 +143,7 @@ extern "C" {
     extern const char *compmachine;
 }
 void print_cpu();
+extern "C" size_t get_screen_size();
 extern "C" void _start() {
  
     // Ensure we got a framebuffer.
@@ -152,9 +153,10 @@ extern "C" void _start() {
     }
     //memset(framebuffer_request.response->framebuffers[0]->address, 0, framebuffer_request.response->framebuffers[0]->width*framebuffer_request.response->framebuffers[0]->pitch);
     pmm_init();
-    fb2 = malloc(framebuffer_request.response->framebuffers[0]->width*framebuffer_request.response->framebuffers[0]->pitch);
+    //fb2 = malloc(framebuffer_request.response->framebuffers[0]->width*framebuffer_request.response->framebuffers[0]->pitch);
     ssfn_setup(framebuffer_request.response->framebuffers[0]);
-    printf("Allocated fb2 at 0x%lx, size: %u\n", fb2, framebuffer_request.response->framebuffers[0]->width*framebuffer_request.response->framebuffers[0]->pitch);
+    //fb2 = malloc(get_screen_size());
+    //printf("Allocated fb2 at 0x%lx, size: %u\n", fb2, framebuffer_request.response->framebuffers[0]->width*framebuffer_request.response->framebuffers[0]->pitch);
     printf("Framebuffer count: %lu\n", framebuffer_request.response->framebuffer_count);
     printf("Loading GDT...");
     GDT::Init();

@@ -53,7 +53,7 @@ static uint8_t *bitmap = NULL;
 static uint64_t highest_page_index = 0;
 static uint64_t last_used_index = 0;
 static uint64_t usable_pages = 0;
-static uint64_t used_pages = 0;
+extern uint64_t used_pages = 0;
 static uint64_t reserved_pages = 0;
 
 extern size_t used_ram;

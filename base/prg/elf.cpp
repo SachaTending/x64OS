@@ -67,7 +67,7 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
             case PT_LOAD:
                 printf("pt_load\n");
                 // Load data from executable to memory
-                if (phdr->p_flags & PF_W) { // If segment is also readable...
+                if (phdr->p_flags & PF_W or true) { // If segment is also writable...
                     vmm_flags |= PTE_WRITABLE; // Set PTE_WRITABLE flag
                 }
                 misalign = phdr->p_vaddr & (4096 - 1);
@@ -92,7 +92,8 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                 printf("ld_path=%s\n", *ld_path);
                 break;
             case PT_PHDR:
-                aux->at_phdr = phdr->p_vaddr;
+                printf("pt_phdr=0x%lx\n", phdr->p_vaddr);
+                aux->at_phdr = phdr->p_vaddr + load_base;
                 break;
             default:
                 break;

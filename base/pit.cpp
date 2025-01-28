@@ -34,10 +34,10 @@ void pit_set_frequency(uint64_t frequency) {
     set_pit_count((uint16_t)new_divisor);
 }
 
-void pit_int(cpu_ctx *regs) {
-    (void)regs;
+void pit_int(idt_regs *regs, void *_) {
+    (void)_;
     global_ticks++;
-    //sched_handl(regs);
+    sched_handl(regs);
 }
 
 void init_pit() {

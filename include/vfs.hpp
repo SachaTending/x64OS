@@ -64,6 +64,8 @@ enum VFS_ERRORS {
 };
 
 int vfs_mount(const char *block, const char *mnt_path, vfs_fs_t *fs);
+int vfs_mount_by_name(const char *block, const char *mnt_path, const char *fs_name);
 vfs_node_t *vfs_create_file(const char *path, bool is_dir);
 vfs_node_t *vfs_get_node(const char *path);
 vfs_stat_t *vfs_stat(const char *path);
+void vfs_register_fs(vfs_fs_t *fs);

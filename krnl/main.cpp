@@ -81,7 +81,6 @@ void map_vmm(uint64_t addr, size_t count) {
         vmm_map_page(krnl_page, a, a+VMM_HIGHER_HALF, PTE_WRITABLE | PTE_PRESENT);
     }
 }
-extern "C" uint64_t *syscall_stack;
 void pmm_on_vmm_enabled();
 void vmm_setup() {
 #if 1
@@ -159,9 +158,6 @@ void fpu_init() {
 extern "C" {
     void sse_enable(void);
     void syscall_entry(void);
-    //void syscall_c_entry(void) {
-    //    log.info("sysenter called lol\n");
-    //}
 }
 size_t global_ticks;
 
@@ -175,13 +171,18 @@ int exec(const char *path, int argc, char *argv[], char *envp[]);
 
 vfs_fs_t *tmpfs_create_fs();
 void unpack_initrd();
+void devtmpfs_init();
+void start_modules();
 int krnl_task() {
-    log.info("multitaskin'\n");
+    log.info("multitasking'\n");
     task_t *t = root_task;
     do {
         log.info("Task: %s PID: %u\n", t->name, t->pid);
         t = t->next;
     } while (t != root_task);
+    devtmpfs_init();
+    log.info("Starting modules...\n");
+    start_modules();
     log.info("Mounting tmpfs...\n");
     vfs_fs_t *fs = tmpfs_create_fs();
     int ret = vfs_mount("none", "/", fs);
@@ -190,16 +191,6 @@ int krnl_task() {
     }
     log.info("Unpacking ramdisk...\n");
     unpack_initrd();
-    vfs_node_t *n = vfs_get_node("/hello_world");
-    if (n == NULL) {
-        //log.info("cannot get file, bruh.\n");
-    } else {
-        char *buf = new char[1500];
-        n->read(n, buf, 150);
-        log.info("File content: %s\n", buf);
-        delete[] buf;
-        n->close(n);
-    }
     /*
     log.info("Experiment number 2: ELF Loading.\n");
     pagemap *pgm = new pagemap;
@@ -228,9 +219,23 @@ int krnl_task() {
             break;
     }
     */
+    log.info("Testing /dev/console...\n");
+    vfs_node_t *n = vfs_get_node("/dev");
+    if (n == NULL) {
+        n = vfs_create_file("/dev", true);
+    }
+    log.debug("n=0x%lx\n");
+    vfs_mount_by_name("none", "/dev", "devtmpfs");
+    n = vfs_get_node("/dev/console");
+    if (n == NULL) {
+        log.error("Failed to open /dev/console.\n");
+    } else {
+        const char *test_str = "Hello, world! Testing /dev/console.\n";
+        n->write(n, (void *)test_str, strlen(test_str));
+    }
     log.info("Starting /init...\n");
-    const char *argv[] = {"init", NULL};
-    char *envp[] = {NULL};
+    const char *argv[] = {"/init", "test", NULL};
+    const char *envp[] = {"LD_SHOW_AUXV=1", NULL};
     exec("/init", 1, argv, envp);
     for(;;) asm volatile ("hlt");
 }
@@ -252,6 +257,7 @@ void init_tss();
 void init_elf();
 void init_ps2();
 void init_pci();
+
 void Kernel::Main() {
     if (krnl_called) return;
     krnl_called = true;
@@ -272,12 +278,11 @@ void Kernel::Main() {
     log.info("Initializing TSS...\n");
     init_tss();
     //for(;;);
-    sched_init(krnl_task, "Kernel main");
-    //create_task(krnl_task, "task2");
+    log.info("Starting scheduler...\n");
+    sched_init();
+    create_task(krnl_task, "task2");
     //create_task(krnl2_task, "task3(should exit)");
     //create_task(test_user_function, "usermode", true);
-    log.info("Starting scheduler...\n");
     start_sched();
-    // Call krnl_task, just in case
-    krnl_task();
+    for(;;);
 }

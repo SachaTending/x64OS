@@ -15,8 +15,8 @@ extern limine_hhdm_request hhdm2;
 #define PTE_USER (1ull << 2ull)
 #define PTE_NX (1ull << 63ull)
 
-#define PTE_ADDR_MASK 0x000ffffffffff000
-#define PTE_GET_ADDR(VALUE) ((VALUE) & PTE_ADDR_MASK)
+
+#define INVALID_PHYS ((uint64_t)0xffffffffffffffff)
 
 #define VMM_HIGHER_HALF hhdm2.response->offset
 
@@ -32,6 +32,7 @@ void vmm_map_range(pagemap *pgm, uint64_t start, size_t count, uint64_t flags=PT
         //printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), start2+(i*4096));
     }
 }
+
 
 struct pagemap *vmm_new_pagemap(void) {
     struct pagemap *pagemap = new struct pagemap;
@@ -68,6 +69,7 @@ extern "C" {
     uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate);
     bool vmm_map_page(struct pagemap *pagemap, uintptr_t virt, uintptr_t phys, uint64_t flags) {
         spinlock_acquire(&pagemap->lock);
+        flags |= PTE_USER;
 
         bool ok = false;
         size_t pml4_entry = (virt & (0x1ffull << 39)) >> 39;
@@ -134,5 +136,35 @@ extern "C" {
             : "r" ((void *)((uint64_t)pagemap->top_level - VMM_HIGHER_HALF))
             : "memory"
         );
+    }
+    uint64_t *vmm_virt2pte(struct pagemap *pagemap, uintptr_t virt, bool allocate) {
+        size_t pml4_entry = (virt & (0x1ffull << 39)) >> 39;
+        size_t pml3_entry = (virt & (0x1ffull << 30)) >> 30;
+        size_t pml2_entry = (virt & (0x1ffull << 21)) >> 21;
+        size_t pml1_entry = (virt & (0x1ffull << 12)) >> 12;
+
+        uint64_t *pml4 = pagemap->top_level;
+        uint64_t *pml3 = get_next_level(pml4, pml4_entry, allocate);
+        if (pml3 == NULL) {
+            return NULL;
+        }
+        uint64_t *pml2 = get_next_level(pml3, pml3_entry, allocate);
+        if (pml2 == NULL) {
+            return NULL;
+        }
+        uint64_t *pml1 = get_next_level(pml2, pml2_entry, allocate);
+        if (pml1 == NULL) {
+            return NULL;
+        }
+
+        return &pml1[pml1_entry];
+    }
+    uintptr_t vmm_virt2phys(struct pagemap *pagemap, uintptr_t virt) {
+        uint64_t *pte = vmm_virt2pte(pagemap, virt, false);
+        if (pte == NULL || (PTE_GET_FLAGS(*pte) & PTE_PRESENT) == 0) {
+            return INVALID_PHYS;
+        }
+
+        return PTE_GET_ADDR(*pte);
     }
 }
