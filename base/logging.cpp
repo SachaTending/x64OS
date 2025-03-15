@@ -58,6 +58,7 @@ void Logger::error(const char *msg, ...) {
 
 void Logger::debug(const char *msg, ...) {
     pre_log();
+    bool old_print_debug = print_debug;
     print_debug = 1;
     printf("\e[34m[DEBUG][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
@@ -65,6 +66,6 @@ void Logger::debug(const char *msg, ...) {
     vprintf_(msg, lst);
     va_end(lst);
     printf("\e[97m"); // switch fg to white
-    print_debug = 0;
+    print_debug = old_print_debug;
     post_log();
 }

@@ -9,43 +9,11 @@ static Logger log("/dev/console");
 
 #define BIT(n) (1 << n)
 
-static char kbdus[128] = {
-    0,  27, '1', '2', '3', '4', '5', '6', '7', '8', /* 9 */
-    '9', '0', '-', '=', '\b',   /* Backspace */
-    '\t',           /* Tab */
-    'q', 'w', 'e', 'r', /* 19 */
-    't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',       /* Enter key */
-    0,          /* 29   - Control */
-    'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',   /* 39 */
-    '\'', '`',   0,     /* Left shift */
-    '\\', 'z', 'x', 'c', 'v', 'b', 'n',         /* 49 */
-    'm', ',', '.', '/',   0,                    /* Right shift */
-    '*',
-    0,  /* Alt */
-    ' ',    /* Space bar */
-    0,  /* Caps lock */
-    0,  /* 59 - F1 key ... > */
-    0,   0,   0,   0,   0,   0,   0,   0,
-    0,  /* < ... F10 */
-    0,  /* 69 - Num lock*/
-    0,  /* Scroll Lock */
-    0,  /* Home key */
-    0,  /* Up Arrow */
-    0,  /* Page Up */
-    '-',
-    0,  /* Left Arrow */
-    0,
-    0,  /* Right Arrow */
-    '+',
-    0,  /* 79 - End key*/
-    0,  /* Down Arrow */
-    0,  /* Page Down */
-    0,  /* Insert Key */
-    0,  /* Delete Key */
-    0,   0,   0,
-    0,  /* F11 Key */
-    0,  /* F12 Key */
-    0,  /* All other keys are undefined */
+static const char convtab_nomod[] = {
+    '\0', '\e', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b', '\t',
+    'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', '\0', 'a', 's',
+    'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', '\0', '\\', 'z', 'x', 'c', 'v',
+    'b', 'n', 'm', ',', '.', '/', '\0', '\0', '\0', ' '
 };
 bool check_val(const char *opt);
 static int serial_received() {
@@ -56,7 +24,7 @@ static char get_input() { // Gets input from PS/2 or serial
     while (true) {
         if (true) {
             unsigned char scancode = ps2_recv_dev();
-            if (!(scancode & 0x80) and !(scancode == 0)) return kbdus[scancode];
+            if (scancode < 0x57) return convtab_nomod[scancode];
         }
     }
 }
@@ -73,17 +41,21 @@ static int console_read(devtmpfs_node_t *node, void *buf, size_t len) {
     (void)node;
     uint8_t *buf1 = (uint8_t *)buf;
     if (len == 1) {
-        while ((inb(0x3f8 + 5) & 1) == 0);
-        *buf1 = inb(0x3f8);
+        //while ((inb(0x3f8 + 5) & 1) == 0);
+        //*buf1 = inb(0x3f8);
+        *buf1 = get_input();
         if (*buf1 == '\r') *buf1 = '\n';
         log.debug("serial recv: %c\n", *buf1);
+        printf("%c", *buf1);
         return 1;
     }
     uint8_t c = 0;
     for (size_t i=0;i<len;i++) {
         //c = get_input();
-        buf1[i] = read_com1();
+        //buf1[i] = read_com1();
+        buf1[i] = get_input();
         log.debug("serial recv: %c, hex: 0x%02x, i: %lu\n", buf1[i], buf1[i], i);
+        printf("%c", buf1[i]);
         if (buf1[i] == '\n' or buf1[i] == '\r') {
             return i;
         }

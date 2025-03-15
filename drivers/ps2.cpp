@@ -71,29 +71,25 @@ void ps2_send_dev(uint8_t byte) {
 static uint8_t _ps2_data_1 = 0;
 static bool _ps2_data_1_received = false;
 uint8_t ps2_recv_dev() {
-    int timeout = 1;
-    while (_ps2_data_1_received == false) {
-        timeout--;
-        asm volatile ("hlt");
-        if (timeout <= 0) {
-            //log.debug("warning: timeout on read\n");
-            return 0;
-        }
-    }
-    _ps2_data_1_received = false;
-    return _ps2_data_1;
+    while ((inb(0x64) & 1) == 0);
+    return inb(0x60);
 }
 
 void ps2_int_1(idt_regs *regs, void *_) {
     (void)_;
     (void)regs;
-    _ps2_data_1 = inb(0x60);
-    _ps2_data_1_received = true;
-    log.debug("ps2 data: 0x%x\n", _ps2_data_1);
+    //ps2_data_1 = inb(0x60);
+    //ps2_data_1_received = true;
+    //og.debug("ps2 data: 0x%x\n", _ps2_data_1);
 }
 
 static uint8_t port_count = 1;
 void init_ps2() {
+    //ps2_send_cmd(CMD_ENABLE_FIRST_PORT);
+    //uint8_t config = ps2_send_cmd(CMD_READ_CONFIG_BYTE);
+    //config = config & ~BIT(0);
+    //ps2_send_cmd2(CMD_WRITE_CONFIG_BYTE, config);
+    //return;
     // Check if PS/2 controller exists
     FADT *fadt = (FADT *)find_table("FACP", 0);
     if (fadt != 0) {
@@ -151,13 +147,15 @@ void init_ps2() {
     }
     ps2_send_cmd(CMD_ENABLE_FIRST_PORT);
     config = ps2_send_cmd(CMD_READ_CONFIG_BYTE);
-    config |= BIT(0);
-    idt_set_int(1, ps2_int_1);
+    //config |= BIT(0);
+    config |= BIT(6);
+    //idt_set_int(1, ps2_int_1);
     ps2_send_cmd2(CMD_WRITE_CONFIG_BYTE, config);
     ps2_send_dev(0xFF);
     uint8_t data = ps2_recv_dev();
     if ((data == 0xFA) || (data == 0xAA)) {
         log.info("PS/2 Controller and device on first port successfully initialized!\n");
+        ps2_send_dev(0xf4);
         ps2_flush_data();
     } else {
         log.error("PS/2 Contoller succesfully initialized but there is something wrong with device.\n");

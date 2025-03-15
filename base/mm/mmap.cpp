@@ -81,7 +81,7 @@ struct addr2range addr2range(struct pagemap *pagemap, uintptr_t virt) {
     };
     return (struct addr2range){.range = NULL, .memory_page = 0, .file_page = 0};
 }
-
+#define PTE_NX (1ull << 63ull)
 bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
                             uintptr_t phys, int prot) {
     uint64_t pt_flags = PTE_PRESENT | PTE_USER;
@@ -90,7 +90,7 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
         pt_flags |= PTE_WRITABLE;
     }
     if ((prot & PROT_EXEC) == 0) {
-        // i forgot to add NX.
+        pt_flags |= PTE_NX;
     }
 
     if (!vmm_map_page(global->shadow_pagemap, virt, phys, pt_flags)) {
@@ -112,8 +112,8 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
 }
 
 bool mmap_pf(idt_regs *regs) {
-    //if ((regs->ErrorCode & 0x1) != 0) {
-    if (false) {
+    if ((regs->ErrorCode & 0x1) != 0) {
+    //if (false) {
         return false;
     }
 

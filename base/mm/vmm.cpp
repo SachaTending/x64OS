@@ -1,12 +1,15 @@
 #include <libc.h>
 #include <vmm.h>
 #include <limine.h>
+#include <logging.hpp>
+
+static Logger log("VMM");
 
 extern pagemap *krnl_page;
 
 extern limine_hhdm_request hhdm2;
 
-#define debug(a, ...) printf(a, __VA_ARGS__)
+//#define debug(a, ...) printf(a, __VA_ARGS__)
 
 #define PAGE_SIZE 4096
 
@@ -113,7 +116,9 @@ extern "C" {
     uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate) {
         if ((uint64_t)top_level < VMM_HIGHER_HALF)top_level += VMM_HIGHER_HALF;
         //debug("next lvl: 0x%016lx %u %01d, ", top_level, idx, allocate);
+        //if (!allocate) log.debug("top_level: 0x%lx idx: %lu allocate: %d\n", top_level, idx, allocate);
         if ((top_level[idx] & PTE_PRESENT) != 0) {
+            //if (!allocate) log.debug("%lu: 0x%lx\n", idx, (uint64_t *)(PTE_GET_ADDR(top_level[idx]) + VMM_HIGHER_HALF));
             return (uint64_t *)(PTE_GET_ADDR(top_level[idx]) + VMM_HIGHER_HALF);
         }
 
@@ -146,14 +151,17 @@ extern "C" {
         uint64_t *pml4 = pagemap->top_level;
         uint64_t *pml3 = get_next_level(pml4, pml4_entry, allocate);
         if (pml3 == NULL) {
+            log.debug("pml3 == NULL\n");
             return NULL;
         }
         uint64_t *pml2 = get_next_level(pml3, pml3_entry, allocate);
         if (pml2 == NULL) {
+            log.debug("pml2 == NULL\n");
             return NULL;
         }
         uint64_t *pml1 = get_next_level(pml2, pml2_entry, allocate);
         if (pml1 == NULL) {
+            log.debug("pm1 == NULL\n");
             return NULL;
         }
 
@@ -161,10 +169,12 @@ extern "C" {
     }
     uintptr_t vmm_virt2phys(struct pagemap *pagemap, uintptr_t virt) {
         uint64_t *pte = vmm_virt2pte(pagemap, virt, false);
+        //log.debug("pte: 0x%lx\n", pte);
         if (pte == NULL || (PTE_GET_FLAGS(*pte) & PTE_PRESENT) == 0) {
+            log.debug("%d\n", pte == NULL || (PTE_GET_FLAGS(*pte) & PTE_PRESENT) == 0);
             return INVALID_PHYS;
         }
-
+        //log.debug("0x%lx\n",  PTE_GET_ADDR(*pte));
         return PTE_GET_ADDR(*pte);
     }
 }

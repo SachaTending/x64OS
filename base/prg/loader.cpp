@@ -49,6 +49,8 @@ LOADER_ERROR load_program(const char *path, pagemap *pgm, char **ld_path, uint64
                 err = loader->load(loader, file, pgm, ld_path, entry, tls, aux, load_base);
                 return err;
             }
+            printf("err=%d\n", err);
         }
     }
+    return LOADER_INVALID_EXEC;
 }

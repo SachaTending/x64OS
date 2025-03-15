@@ -7,6 +7,10 @@
 #include <elf.h>
 #include <prg_loader.hpp>
 #include <libc.h>
+#include <logging.hpp>
+#include <krnl.hpp>
+
+static Logger log("ELF");
 
 LOADER_ERROR elf_check_prg(struct prg_loader *prg_loader, vfs_node_t *node) {
     node->seek(node, 0, SEEK_SET); // Seek to start
@@ -78,6 +82,8 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                     vmm_map_page(pgm, phdr->p_vaddr+(i*4096)+load_base, ((uintptr_t)phys)+(i*4096), vmm_flags);
                 }
                 node->seek(node, phdr->p_offset, SEEK_SET);
+                phys += VMM_HIGHER_HALF;
+                log.debug("phys: 0x%lx\n", phys);
                 node->read(node, (void *)(((uint64_t)phys)+misalign), phdr->p_filesz);
                 break;
             case PT_INTERP:

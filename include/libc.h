@@ -19,6 +19,7 @@ void pmm_free(void *addr, size_t pages);
 size_t strlen(const char *str);
 void strcpy(char *dst, const char *src);
 int strcmp(const char *s1, const char *s2);
+int strncmp(const char *s1, const char *s2, size_t n);
 const char *strdup(const char *in);
 char* strchr(const char* str, int c);
 void itoa(char *buf, unsigned long int n, int base);

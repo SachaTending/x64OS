@@ -109,6 +109,7 @@ bool tmpfs_file_exists(struct tmpfs_mnt *context, const char *path) {
     for (size_t i=0;i<context->vect->size();i++) {
         tmpfs_file *file = context->vect->data()[i];
         if (!strcmp(path, file->fpath)) {
+            if (strlen(path) != strlen(file->fpath)) continue;
             return true;
         }
     }
@@ -119,6 +120,7 @@ vfs_node_t *tmpfs_create_file(struct vfs_mnt *mnt, const char *path, bool is_dir
     //printf("tmpfs: create file %s, is dir: %d\n", path, is_dir);
     tmpfs_mnt *context = (tmpfs_mnt *)mnt->priv;
     if (tmpfs_file_exists(context, path) == true) {
+        log.debug("tmpfs_create_file(0x%lx, %s, %d): file already exists.\n", mnt, path, is_dir);
         return NULL; // File already exists
     }
     tmpfs_file *file = new tmpfs_file;
@@ -134,6 +136,8 @@ vfs_node_t *tmpfs_get_file(struct vfs_mnt *mnt, const char *path) {
     for (size_t i=0;i<context->vect->size();i++) {
         tmpfs_file *file = context->vect->data()[i];
         if (!strcmp(path, file->fpath)) {
+            if (strlen(path) != strlen(file->fpath)) continue;
+            log.debug("tmpfs_get_file(0x%lx, %s): found file %s\n", mnt, path, file->fpath);
             vfs_node_t *n = new vfs_node_t;
             tmpfs_node *n2 = new tmpfs_node;
             n2->file = file;

@@ -31,6 +31,10 @@ void *mgmt_mmap(uintptr_t hint, size_t length, uint64_t flags, int fdnum, size_t
 int mgmt_set_tcb(void *ptr);
 void mgmt_syscall_getcwd(char *buffer, size_t len);
 size_t mgmt_syscall_seek(size_t handle, size_t seek_pos, int whence);
+void mgmt_syscall_ioctl(size_t handle, uint64_t req, void *s);
+size_t mgmt_syscall_exec(const char *path, char **argv, char **env);
+int sched_fork();
+int sched_fork(idt_regs *regs);
 void sys_print(const char *txt, uint64_t len) {
     printf("");
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
@@ -38,7 +42,7 @@ void sys_print(const char *txt, uint64_t len) {
 uint8_t ps2_recv_dev();
 void int80(idt_regs *regs, void *_) {
     (void)_;
-    //log.debug("SYSCALL: %u\n", regs->rax);
+    log.debug("SYSCALL: %u RIP: 0x%lx\n", regs->rax, regs->rcx);
     switch (regs->rax)
     {
         case 0:
@@ -64,6 +68,20 @@ void int80(idt_regs *regs, void *_) {
         case 9:
             regs->rax = mgmt_syscall_seek((size_t)regs->rdi, (size_t)regs->rsi, (int)regs->rdx);
             break;
+        case 10:
+            regs->rax = 0;
+            mgmt_syscall_ioctl((size_t)regs->rdi, regs->rsi, (void *)regs->rdx);
+            break;
+        case 11:
+            // TODO: Implement unmap
+            regs->rax = 0;
+            break;
+        case 12:
+            regs->rax = mgmt_syscall_exec((const char *)regs->rdi, (char **)regs->rsi, (char **)regs->rdx);
+            break;
+        case 13:
+            regs->rax = sched_fork(regs);
+            break;
         case 39:
             regs->rax = getpid();
             break;
@@ -76,17 +94,19 @@ void int80(idt_regs *regs, void *_) {
             break;
         default:
             log.debug("unknown syscall: %u\n", regs->rax);
+            regs->rax = 0;
             break;
     }
     //regs->cs = 8*8 | 3;
     //regs->ss = 7*8 | 3;
 }
 
-extern "C" void syscall_c_entry(idt_regs *regs) {
+extern "C" idt_regs *syscall_c_entry(idt_regs *regs) {
     //printf("SYSCALL: %u\n", regs->rax);
     int80(regs, nullptr);
     //regs->cs = (8*8) | 3;
     //regs->ss = (7*8) | 3;
+    return regs;
 }
 
 extern "C" void syscall_entry(void);

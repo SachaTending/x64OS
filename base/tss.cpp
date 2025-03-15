@@ -11,6 +11,7 @@
 tss_entry_t *tss;
 void idt_set_global_ist(uint8_t ist);
 void init_tss() {
+    asm volatile("cli");
     uint64_t stack = (uint64_t)malloc(STACK_SIZE); // Allocate stack
     memset((void *)stack, 0, STACK_SIZE);
     tss = new tss_entry_t; // Create tss
@@ -20,6 +21,7 @@ void init_tss() {
     tss->ist[1] = ((uint64_t)malloc(STACK_SIZE)+STACK_SIZE);
     tss->ist[2] = ((uint64_t)malloc(STACK_SIZE)+STACK_SIZE);
     //vmm_map_range(&krnl_page, tss->ist[0]-STACK_SIZE, STACK_SIZE/4096, PTE_WRITABLE | PTE_PRESENT);
-    //idt_set_global_ist(2);
+    idt_set_global_ist(2);
     gdt_set_tss((uint64_t)tss-VMM_HIGHER_HALF); // (SCARY PART, CAN BREAK ENTIRE OS)Set tss address in gdt and load it
+    asm volatile("sti");
 }

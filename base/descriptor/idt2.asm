@@ -69,7 +69,7 @@ fetch_cr3:
 	;mov  fs, ax
 	pop  ax
 	;mov ax, 0x10
-	mov  gs, ax
+	;mov  gs, ax
 	add  rsp, 8    ; the space occupied by the cr2 register
 	;pop  rax
 	;mov  cr3, rax
@@ -105,9 +105,7 @@ int_common:
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
-	mov gs, ax
 	mov ss, ax
-	mov fs, ax
 	mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
 	mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.
 	mov   rdx, [rdx]                       ; Load CS, to determine the previous mode when entering a hardware interrupt
@@ -168,16 +166,9 @@ syscall_entry:
 	; defer actually loading those until after DS was changed.
 	; update the segments
 	PUSH_STATE
-	push 0x28           ; code segment
-    lea rax, [rel .a]   ; jump address
-	push rax
-	retfq               ; return far - will go to .a now
-.a:
 	mov   ax, 0x30                         ; Use ring 0 segment for kernel mode use. We have backed the old values up
 	mov ds, ax
 	mov es, ax
-	mov fs, ax
-	mov gs, ax
 	mov ss, ax
 	;mov   rbx, [rbx]                       ; Retrieve the interrupt number and RIP from interrupt frame. These were deferred
 	;mov   rcx, [rcx]                       ; so that we wouldn't attempt to access the kernel stack using the user's data segment.
@@ -189,7 +180,7 @@ syscall_entry:
 	mov   rdi, rsp                         ; Retrieve the idt_regs to call the trap handler
 	push  rdi							   ; Push pointer to registers
 	call  syscall_c_entry                     ; And call idt_handler!!
-	pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
+	;pop   rax							   ; a small workaround for interrupts to work, idt_handler2 returns nothing which results unexpected behaviour without pop rax
 	mov   rsp, rax                         ; Use the new idt_regs instance as what to pull:
 	pop   rbp                              ; Leave the stack frame
 	pop   rcx                              ; Skip over the RIP duplicate that we pushed

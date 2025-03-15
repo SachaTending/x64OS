@@ -86,7 +86,7 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     if (regs->IntNumber != 32 and regs->IntNumber != 14) {
     //if (regs->IntNumber != 32) {
     //if (1) {
-        //log.debug("INT: %u, CS: 0x%lx CR2: 0x%lx, FS: 0x%lx\n", regs->IntNumber, regs->cs,regs->cr2, regs->fs);
+        log.debug("INT: %u, CS: 0x%lx CR2: 0x%lx, FS: 0x%lx, RIP: 0x%lx\n", regs->IntNumber, regs->cs,regs->cr2, regs->fs, regs->rip);
     }
     if (regs->IntNumber == 14) {
         if (mmap_pf(regs)) {
@@ -114,8 +114,17 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
         // Special interrupt, syscall
         syscall_c_entry(regs);
         //gdt_reload();
-        regs->ds = regs->es = (7*8);
         return regs;
+    }
+    if (regs->IntNumber == 13) {
+        uint8_t erc = errcode_13_shift & 0b11;
+        if ((errcode_13_shift >> 2) == 7 and erc == 0) {
+            gdt_reload();
+            regs->ss = (6*8);
+            regs->cs = (5*8);
+            //regs->es = regs->ds = 7*8;
+            return regs;
+        }
     }
     if (regs->IntNumber < 32) {
         printf("OH NO: INT_%u ERR=0x%04x\n", regs->IntNumber, regs->ErrorCode);
@@ -155,6 +164,10 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     uint64_t a = ((uint64_t)6*8) << 48;
     a |= (uint64_t)((uint64_t)0x28 << 32);
     wrmsr(0xc0000081, a);
+    task_t *task = get_current_task();
+    if (task == NULL or task->regs.cs == 0) {
+        return regs;
+    }
     return regs;
 }
 

@@ -61,6 +61,7 @@ size_t get_screen_size();
 void flanterm_putchar(struct flanterm_context *ctx, uint8_t c);
 struct flanterm_context *ft_ctx;
 void ssfn_putc2(uint32_t c) {
+    if (ft_ctx == NULL) return;
     char c2 = (char)c;
     flanterm_write(ft_ctx, &c2, 1);
     return;
@@ -141,7 +142,7 @@ void ssfn_setup(struct limine_framebuffer *frb) {
         NULL, NULL,
         NULL, NULL,
         NULL, 0, 0, 1,
-        0, 0,
+        1, 1,
         0
     );
     frb2 = frb;

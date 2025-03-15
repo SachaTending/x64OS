@@ -180,7 +180,7 @@ static void *inner_alloc(size_t pages, uint64_t limit) {
             p = 0;
         }
     }
-
+    log.debug("inner_alloc(pages=%lu, limit=%lu): Allocation failed, no free pages(no free ram)\n");
     return NULL;
 }
 

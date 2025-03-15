@@ -236,7 +236,7 @@ int krnl_task() {
     log.info("Starting /init...\n");
     const char *argv[] = {"/init", "test", NULL};
     const char *envp[] = {"LD_SHOW_AUXV=1", NULL};
-    exec("/init", 1, argv, envp);
+    exec("/init", 2, argv, envp);
     for(;;) asm volatile ("hlt");
 }
 
@@ -280,7 +280,7 @@ void Kernel::Main() {
     //for(;;);
     log.info("Starting scheduler...\n");
     sched_init();
-    create_task(krnl_task, "task2");
+    create_task(krnl_task, "task2", false);
     //create_task(krnl2_task, "task3(should exit)");
     //create_task(test_user_function, "usermode", true);
     start_sched();

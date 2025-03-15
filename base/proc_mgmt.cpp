@@ -63,6 +63,15 @@ void mgmt_syscall_write(size_t handle, void *buf, size_t count) {
     //log.debug("write(%u, 0x%lx, %u);\n", handle, buf, count);
 }
 
+void mgmt_syscall_ioctl(size_t handle, uint64_t req, void *s) {
+    proc_handle *handle2 = mgmt_find_handle(handle);
+    if (handle2 == NULL) {
+        log.debug("ioctl(%u, %lu, 0x%lx): unknown handle\n", handle, req, s);
+        return;
+    }
+    handle2->node->ioctl(handle2->node, (int)req, s);
+}
+
 size_t mgmt_syscall_read(size_t handle, void *buf, size_t count) {
     log.debug("%lu: read(%lu, 0x%lx, %lu);\n", getpid(), handle, buf, count);
     proc_handle *handle2 = mgmt_find_handle(handle);
@@ -187,13 +196,43 @@ void mgmt_dup(size_t pid, int fd) {
     proc->next_fd++;
     proc->handles.push_back(clone);
 }
+int exec(const char *path, int argc, char *argv[], char *envp[]);
+size_t mgmt_syscall_exec(const char *path, char **argv, char **env) {
+    int argc = 0;
+    while (argv[argc] != NULL) {
+        log.debug("argv[%d]=0x%lx\n", argc, argv[argc]);
+        argc++;
+    }
+    char **argv2 = new char*[argc];
+    memset(argv2, 0, sizeof(char **)*(argc));
+    for (int i=0;i<argc;i++) {
+        argv2[i] = (char *)strdup(argv[i]);
+    }
+    int envc = 0;
+    for (int i=0;env[i]!=NULL;i++) {
+        envc = i;
+    }
+    char **env2 = new char *[envc];
+    memset(env2, 0, sizeof(char **)*(envc));
+    for (int i=0;i<envc;i++) {
+        env2[i] = (char *)strdup(env[i]);
+    }
+    log.debug("argc: %d\n", argc);
+    size_t ret = exec(path, argc, argv2, env2);
+    // TODO: Free argv2 and env2
+    return ret;
+}
+
+void mgmt_waitpid(int pid) {
+    
+}
 
 void mgmt_on_new_program(size_t pid) {
     proc_info *proc = new proc_info;
     proc->pid = pid;
     proc->handles = proc_handles_t();
     proc->next_fd = 0;
-    proc->cwd = strdup("/");
+    proc->cwd = (const char *)strdup("/");
     log.debug("Registered process %lu\n", pid);
     proc_infos.push(proc);
     int ret = mgmt_force_open(pid, "/dev/console");

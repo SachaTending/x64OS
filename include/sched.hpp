@@ -16,15 +16,18 @@ void sched_init();
 void start_sched();
 void resume_sched();
 void stop_sched();
-volatile void create_task(int (*task)(), 
+bool is_sched_started();
+void create_task(int (*task)(), 
     const char *name, 
     bool usermode=false, 
     pagemap *pgm=krnl_page, 
     uint64_t tls=0, 
-    int argc=0, 
     const char **argv=0, 
     const char **envp=0,
-    auxval* aux=0);
+    auxval* aux=0,
+    uint64_t *out_pid=0,
+    int argc=0
+);
 
 int getpid();
 void sched_kill_pid(int pid);
@@ -50,6 +53,8 @@ typedef struct task {
     uint64_t tls;
     uintptr_t mmap_anon_base;
     bool usermode;
+    uint64_t cr3;
+    task *fork_parent;
 } task_t;
 
 extern task_t *root_task, *current_task;

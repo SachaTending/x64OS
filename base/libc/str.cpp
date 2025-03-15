@@ -1,5 +1,9 @@
 #include <stddef.h>
 #include <libc.h>
+#include <logging.hpp>
+
+static Logger log("libc(str.cpp)");
+
 extern "C" {
     size_t strlen(const char *str) {
         size_t o = 0;
@@ -78,6 +82,19 @@ extern "C" {
     int strcmp(const char *s1, const char *s2) {
         size_t l = strlen(s1);
         return memcmp(s1, s2, l);
+    }
+    int strncmp(const char *s1, const char *s2, size_t n) {
+        for (size_t i = 0; i < n; i++) {
+            char c1 = s1[i], c2 = s2[i];
+            if (c1 != c2) {
+                return 1;
+            }
+            if (!c1) {
+                return 0;
+            }
+        }
+    
+        return 0;
     }
     const char *strdup(const char *in) {
         size_t l = strlen(in)+1;

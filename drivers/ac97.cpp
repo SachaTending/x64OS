@@ -20,6 +20,8 @@ static pci_id_t ac97_ids[] = {
     {0x8086, 0x2415}
 };
 
+#define AC97_SET_BITRATE 1
+
 struct ac97_priv {
     uint16_t bar0, bar1;
     ac97_buf_info *bufs;
@@ -38,6 +40,17 @@ static bool ac97_probe(struct pci_driver *d, pci_dev_t *dev) {
         return true;
     }
     return false;
+}
+static void ac97_write_samp_rate(ac97_priv *priv, uint16_t samp_rate);
+static int ac97_ioctl(devtmpfs_node_t *node, int n, void *b) {
+    ac97_priv *priv = (ac97_priv *)node->priv;
+    switch (n) 
+    {
+        case AC97_SET_BITRATE:
+            ac97_write_samp_rate(priv, (uint16_t)b);
+            break;
+    }
+    return 0;
 }
 
 static void ac97_write_samp_rate(ac97_priv *priv, uint16_t samp_rate) {
@@ -58,10 +71,14 @@ static void ac97_int_handler(idt_regs *r, void *priv) {
     }
 }
  static int ac97_dsp_write(devtmpfs_node_t *node, void *buf, size_t len) {
-   // log.debug("ac97_dsp_write(0x%lx, 0x%lx, %lu);\n", node, buf, len);
+    //log.debug("ac97_dsp_write(0x%lx, 0x%lx, %lu);\n", node, buf, len);
     ac97_priv *priv = (ac97_priv *)node->priv;
     // Wait for card to complete playing audio
-    while (priv->int_trig == false);
+    int timeout = 10;
+    while (priv->int_trig == false or timeout > 0) {
+        timeout--;
+        //log.debug("timeout: %u\n", timeout);
+    }
     priv->int_trig = false;
     //log.debug("bar0: 0x%04x bar1: 0x%04x, bdl: 0x%lx\n", priv->bar0, priv->bar1, priv->bufs);
     // Calculate needed buffers for this data
@@ -78,15 +95,24 @@ static void ac97_int_handler(idt_regs *r, void *priv) {
     } else size_t buf_cnt = 1;
     // Now set last valid entry to next buffer.
     uint16_t curr_buf = inb(priv->bar1+0x14); // Get current buffer
+    //log.debug("curr_buf: %u\n", curr_buf);
     //outb(priv->bar1+0x15, (curr_buf+1) & 0b11111);
     // Now write samples to current buffer
     pagemap *pgm = get_current_task()->pgm;
+    asm volatile ("cli");
     vmm_switch_to(krnl_page);
+    //log.debug("switched to kernel page.\n");
     ac97_buf_info *buf2 = &priv->bufs[curr_buf];
+    buf2 = (ac97_buf_info *)vmm_virt2phys(krnl_page, (uint64_t)buf2);
+    //cbuf2 += VMM_HIGHER_HALF;
+    //log.debug("buf2: 0x%lx\n", buf2);
     buf2->buf_addr = vmm_virt2phys(pgm, (uint64_t)buf);
+    //log.debug("buf2->buf_addr: 0x%lx\n", buf2->buf_addr);
     buf2->samples = (uint16_t)samples;
     // Switch back to task pgm.
     vmm_switch_to(pgm);
+    //log.debug("switched to task page.\n");
+    asm volatile ("sti");
     //log.debug("curr_buf: 0x%lx, samples: %lu\n", curr_buf, samples);
     // Start DMA.
     outb(priv->bar1+0x1B, 1 | BIT(3) | BIT(2));
@@ -149,6 +175,7 @@ static void * ac97_init(struct pci_driver *d, pci_dev_t *dev) {
     devtmpfs_node_t *n = new devtmpfs_node_t;
     n->priv = (void *)priv;
     n->write = ac97_dsp_write;
+    n->ioctl = ac97_ioctl;
     devtmpfs_register_file(n, "/dsp");
     priv->int_trig = true;
     return priv;
