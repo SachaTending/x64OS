@@ -22,7 +22,12 @@ TODO List:
     - [ ] Getting list of files and other stuff
  - [x] Program loading
  - [x] PCI
- - [ ] Drivers support
+ - [x] Drivers support
+ - [ ] Modules loading support
+ - [ ] Sound
+    - [x] AC97
+    - [ ] ALSA
+    - [ ] Intel HDA
  - [ ] Networking
     - [ ] Ethernet
     - [ ] UDP
