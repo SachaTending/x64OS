@@ -1,6 +1,14 @@
 #pragma once
 #include <stdint.h>
 
+struct iretq_frame {
+	uint64_t rip;
+	uint64_t cs;
+	uint64_t rflags;
+	struct iretq_frame *rsp;
+	uint64_t ss;
+};
+
 struct idt_regs
 {
 	uint64_t rbp;

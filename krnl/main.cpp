@@ -7,6 +7,7 @@
 #include <ioapic.hpp>
 #include <sched.hpp>
 #include <prg_loader.hpp>
+#include <printf/printf.h>
 
 static Logger log("Kernel");
 
@@ -119,12 +120,21 @@ void vmm_setup() {
         oldpr = prog;
         prog = addr / (addr_end / 100);
         if (addr >= addr_end or addr >= addr_end-4096) prog = 100;
-        if (oldpr != prog) log.info("Progress: %d%%\r", prog);
+        //if (oldpr != prog) log.info("Progress: %d%%\r", prog);
+        if (oldpr != prog) {
+            log.info("Progress: ");
+            printf("[");
+            #define PROGRESSBAR_SIZE 50
+            int prog_min = prog / (100 / PROGRESSBAR_SIZE);
+            for (int i=0;i<PROGRESSBAR_SIZE-(PROGRESSBAR_SIZE-prog_min);i++) putchar_('=');
+            for (int i=0;i<PROGRESSBAR_SIZE-prog_min;i++) putchar_(' ');
+            printf("] %02d%%\r", prog);
+        }
         //log.info("Progress: %d%% Address: 0x%016lx\r", prog, addr);
         vmm_map_page(pg, addr, addr, PTE_PRESENT | PTE_WRITABLE);
         vmm_map_page(pg, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE);
     }
-    printf("\n");
+    putchar_('\n');
     krnl_page = pg;
     pmm_on_vmm_enabled();
     log.info("Switching pages...\n");
@@ -135,7 +145,7 @@ void vmm_setup() {
 void acpi_init();
 void smp_init();
 void funny();
-void lapic_init(void);
+bool lapic_init(void);
 void init_pit();
 void madt_init();
 void parse_opts();
@@ -174,7 +184,7 @@ void unpack_initrd();
 void devtmpfs_init();
 void start_modules();
 int krnl_task() {
-    log.info("multitasking'\n");
+    log.info("multitasking\n");
     task_t *t = root_task;
     do {
         log.info("Task: %s PID: %u\n", t->name, t->pid);
@@ -235,7 +245,7 @@ int krnl_task() {
     }
     log.info("Starting /init...\n");
     const char *argv[] = {"/init", "test", NULL};
-    const char *envp[] = {"LD_SHOW_AUXV=1", NULL};
+    const char *envp[] = {"LD_SHOW_AUXV=1", "HOME=/", NULL};
     exec("/init", 2, argv, envp);
     for(;;) asm volatile ("hlt");
 }
@@ -267,10 +277,11 @@ void Kernel::Main() {
     acpi_init();
     parse_opts();
     madt_init();
+    bool lapic_ret = lapic_init();
     smp_init();
     //log.info("SMP Not working.\n");
     init_pit();
-    init_pic();
+    if (lapic_ret == false) init_pic();
     init_elf();
     init_pci();
     init_ps2();

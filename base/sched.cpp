@@ -119,7 +119,11 @@ size_t strlen_pgm(const char *txt) {
     while (*txt++) o++;
     return o;
 }
-
+#if CONFIG_DEBUG == 'y'
+#define DBG_PRINT(...) printf(__VA_ARGS__)
+#else
+#define DBG_PRINT(...)
+#endif
 void create_task(int (*task)(), 
     const char *name, 
     bool usermode=false, 
@@ -163,26 +167,26 @@ void create_task(int (*task)(),
         //vmm_map_range(pgm, (uint64_t)task_entry-VMM_HIGHER_HALF, 8192, PTE_PRESENT | PTE_USER);
         new_task->regs.rsp = (rsp+STACK_SIZE);
         uint64_t old_p = read_cr3();
-        printf("old_cr3: 0x%lx\n", old_p);
+        DBG_PRINT("old_cr3: 0x%lx\n", old_p);
         //write_cr3((uint64_t)krnl_page->top_level-VMM_HIGHER_HALF);
         if (argv != NULL && envp != NULL && aux != NULL) {
             //vmm_switch_to(pgm);
-            printf("pushing argc, argv, envp, aux...\n");
-            printf("rsp: 0x%lx\n", new_task->regs.rsp);
+            DBG_PRINT("pushing argc, argv, envp, aux...\n");
+            DBG_PRINT("rsp: 0x%lx\n", new_task->regs.rsp);
             stack = (uintptr_t *)new_task->regs.rsp;
             //stack += VMM_HIGHER_HALF;
-            printf("stack: 0x%lx\n", stack);
+            DBG_PRINT("stack: 0x%lx\n", stack);
             #define GET_REAL_STACK ((uint64_t *)(vmm_virt2phys(pgm, (uint64_t)stack)+VMM_HIGHER_HALF))
             void *stack_top = new_task->stack_addr+STACK_SIZE;
             int envp_len;
             for (envp_len = 0; envp[envp_len] != NULL; envp_len += 1) {
                 size_t len = strlen_pgm(envp[envp_len]);
-                printf("len: %d\n", len);
+                DBG_PRINT("len: %d\n", len);
                 stack = (uintptr_t *)((uint64_t)stack - len - 1);
                 memcpy((void *)GET_REAL_STACK, envp[envp_len], len);
-                printf("pushed env: %s\n", envp[envp_len]);
+                DBG_PRINT("pushed env: %s\n", envp[envp_len]);
             }
-            printf("pushed all env\n");
+            //printf("pushed all env\n");
             //int argv_len;
             //printf("argv: 0x%lx\n", argv);
 //
@@ -204,13 +208,13 @@ void create_task(int (*task)(),
             for (argv_len = 0; argv_len < argc; argv_len++) {
                 size_t length = strlen_pgm(argv[argv_len]);
                 stack = (void *)stack - length - 1;
-                printf("memcpy(0x%lx, 0x%lx, %lu)\n", stack, argv[argv_len]);
+                //printf("memcpy(0x%lx, 0x%lx, %lu)\n", stack, argv[argv_len]);
                 memcpy(GET_REAL_STACK, argv[argv_len], length);
             }
 
-            printf("argv_len=%d\n", argv_len);
+            //printf("argv_len=%d\n", argv_len);
             stack = (uintptr_t *)ALIGN_DOWN((uintptr_t)stack, 16);
-            printf("stack: 0x%lx\n", stack);
+            //printf("stack: 0x%lx\n", stack);
             if (((argv_len + envp_len + 1) & 1) != 0) {
                 stack--;
             }
@@ -221,10 +225,10 @@ void create_task(int (*task)(),
             *GET_REAL_STACK = 0;
             stack--;
             *GET_REAL_STACK = 0;
-            printf("stack: 0x%lx\n", stack);
+            //printf("stack: 0x%lx\n", stack);
             stack -= 2; GET_REAL_STACK[0] = AT_SECURE, GET_REAL_STACK[1] = 0;
             stack -= 2; GET_REAL_STACK[0] = AT_ENTRY, GET_REAL_STACK[1] = aux->at_entry;
-            printf("at_entry=0x%lx\n", aux->at_entry);
+            //printf("at_entry=0x%lx\n", aux->at_entry);
             stack -= 2; GET_REAL_STACK[0] = AT_PHDR,  GET_REAL_STACK[1] = aux->at_phdr;
             stack -= 2; GET_REAL_STACK[0] = AT_PHENT, GET_REAL_STACK[1] = aux->at_phent;
             stack -= 2; GET_REAL_STACK[0] = AT_PHNUM, GET_REAL_STACK[1] = aux->at_phnum;
@@ -235,7 +239,7 @@ void create_task(int (*task)(),
             *GET_REAL_STACK = 0;
             stack -= envp_len;
             for (int i = 0; i < envp_len; i++) {
-                printf("old_rsp -= strlen(0x%lx(%d))\n", envp[i], i);
+                //printf("old_rsp -= strlen(0x%lx(%d))\n", envp[i], i);
                 old_rsp -= strlen_pgm(envp[i]) + 1;
                 GET_REAL_STACK[i] = old_rsp;
             }
@@ -246,21 +250,21 @@ void create_task(int (*task)(),
             *GET_REAL_STACK = 0;
             stack -= argv_len;
             for (int i = 0; i < argv_len; i++) {
-                printf("old_rsp -= strlen(0x%lx(%d))\n", argv[i], i);
+                //printf("old_rsp -= strlen(0x%lx(%d))\n", argv[i], i);
                 old_rsp -= strlen_pgm(argv[i]) + 1;
                 GET_REAL_STACK[i] = old_rsp;
             }
-            printf("stack: 0x%lx\n", stack);
+            //printf("stack: 0x%lx\n", stack);
             //*(--stack) = argv_len;
             stack--;
             *GET_REAL_STACK = argv_len;
-            printf("argv_len: %lu\n", argv_len);
+            //printf("argv_len: %lu\n", argv_len);
             //printf("pushed: %lu\n", *stack);
             //*(--stack) = (uint64_t)stack;
             //new_task->regs.rdi = (uint64_t)stack;
             new_task->regs.rsp = (uint64_t)stack;
             //new_task->regs.rsp -= (uint64_t)stack_top - (uint64_t)stack;
-            printf("rsp: 0x%lx\n", new_task->regs.rsp);
+            //printf("rsp: 0x%lx\n", new_task->regs.rsp);
         }
         write_cr3(old_p);
     } else {
@@ -379,7 +383,19 @@ void sched_handl(idt_regs *regs) {
     //if (current_task->usermode == true) log.debug("%u rsp: 0x%lx\n", current_task->pid, current_task->regs.rsp);
     //log.debug("Switched to task %s, pid: %d, RIP: 0x%lx\n", current_task->name, current_task->pid, current_task->regs.rip);
 }
-
+void vmm_map_range2(pagemap *pgm, uint64_t start, uint64_t phys,size_t count, uint64_t flags=PTE_PRESENT) {
+    uint64_t start2 = ALIGN_DOWN(start, 4096);
+    uint64_t end = ALIGN_UP(start+count, 4096);
+    size_t pages = (end/4096)-(start/4096);
+    pages += 1;
+    //printf("start: 0x%lx, end: 0x%lx, pages to map: %lu\n", start2, end, pages);
+    for (size_t i=0;i<pages;i++) {
+        vmm_map_page(pgm, start2+(i*4096), phys+(i*4096), flags);
+        vmm_map_page(pgm, (start2+(i*4096))+VMM_HIGHER_HALF, phys+(i*4096), flags);
+        //printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), start2+(i*4096));
+    }
+}
+struct pagemap *vmm_fork_pagemap(struct pagemap *pagemap);
 int sched_fork(idt_regs *regs) {
     task_t *current_task2 = current_task;
     if (!current_task->fork_parent) {
@@ -395,6 +411,7 @@ int sched_fork(idt_regs *regs) {
         new_task->regs.es = new_task->regs.ds = (7*8);
         new_task->regs.cs = (8*8) | 3;
         new_task->regs.rip = new_task->regs.rcx;
+        new_task->pgm = vmm_fork_pagemap(current_task2->pgm);
         uint64_t stack = (uint64_t)new_task->stack_addr;
         printf("stack: 0x%lx\n", stack);
         task_t *task_p = root_task;
@@ -407,6 +424,15 @@ int sched_fork(idt_regs *regs) {
         new_task->last_task = true;
         new_task->next = root_task;
         new_task->regs.rax = new_task->regs.rbx = 0;
+        new_task->stack_addr = pmm_alloc(STACK_SIZE);
+        for (int i=0;i<256;i++) {
+            new_task->pgm->top_level[i] = current_task2->pgm->top_level[i];
+        }
+        memcpy(new_task->stack_addr+VMM_HIGHER_HALF, current_task->stack_addr+VMM_HIGHER_HALF, STACK_SIZE);
+        vmm_map_range2(new_task->pgm, (current_task->stack_addr), (new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE);
+        new_task->cr3 = (uint64_t)((void *)new_task->pgm->top_level - VMM_HIGHER_HALF);
+        printf("cr3[256]=0x%lx\n", new_task->pgm->top_level[256]);
+        printf("new_task->cr3=0x%lx\n", new_task->cr3);
         _sched_stop_internal = false;
         return new_task->pid;
     }

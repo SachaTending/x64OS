@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
     //buf = (char *)malloc(S);
     memset(b2, 0, S);
     buf = b2;
-    printf("argc: %d\n", argc);
+    //printf("argc: %d\n", argc);
     for (int i=0;i<argc;i++) {
         printf("argv[i]=%s\n", argv[i]);
     }

@@ -82,6 +82,8 @@ void on_page_fault(idt_regs *regs) {
 }
 void start_debug_console();
 void gdt_reload(void);
+extern bool is_lapic_enabled;
+void lapic_eoi();
 extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     if (regs->IntNumber != 32 and regs->IntNumber != 14) {
     //if (regs->IntNumber != 32) {
@@ -91,8 +93,8 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     if (regs->IntNumber == 14) {
         if (mmap_pf(regs)) {
         //if (true) {
-            regs->ss = 0x3b;
-            regs->cs = (8 * 8) | 3;
+            //regs->ss = 0x3b;
+            //regs->cs = (8 * 8) | 3;
             //printf("ss: 0x%lx cs: 0x%lx fs: 0x%lx\n", regs->ss, regs->cs, regs->fs);
             //printf("addr=0x%lx\n", regs->cr2);
             return regs;
@@ -119,9 +121,22 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     if (regs->IntNumber == 13) {
         uint8_t erc = errcode_13_shift & 0b11;
         if ((errcode_13_shift >> 2) == 7 and erc == 0) {
-            gdt_reload();
-            regs->ss = (6*8);
-            regs->cs = (5*8);
+            //gdt_reload();
+            //regs->ss = (8*8);
+            //regs->cs = (7*8);
+            struct iretq_frame *frame = (struct iretq_frame *) regs->rsp;
+            printf("frame->cs=0x%x\n", frame->cs);
+            printf("frame->ss=0x%x\n", frame->ss);
+            printf("frame->rip=0x%lx\n", frame->rip);
+            printf("frame->rsp=0x%lx\n", frame->rsp);
+            printf("regs->rip=0x%lx\n", regs->rip);
+            printf("regs->cs=0x%x\n", regs->cs);
+            printf("regs->ss=0x%x\n", regs->ss);
+            printf("regs->ds=0x%x\n", regs->ds);
+            printf("regs->es=0x%x\n", regs->es);
+            printf("frame->frame->rip=0x%lx\n", frame->rsp->rip);
+            printf("frame->frame->frame->rip=0x%lx\n", frame->rsp->rip);
+            regs->ds = regs->es = regs->ss;
             //regs->es = regs->ds = 7*8;
             return regs;
         }
@@ -160,7 +175,8 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
         printf("WARNING: Unknown int %u\n", regs->IntNumber);
         stacktrace(0);
     }
-    eoi(regs->IntNumber);
+    if (is_lapic_enabled) lapic_eoi();
+    else eoi(regs->IntNumber);
     uint64_t a = ((uint64_t)6*8) << 48;
     a |= (uint64_t)((uint64_t)0x28 << 32);
     wrmsr(0xc0000081, a);

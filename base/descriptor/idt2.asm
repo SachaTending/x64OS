@@ -60,7 +60,7 @@ fetch_cr3:
 	mov  ds, ax
 	cmp  ax,  0x38    			  ; If the data segment is in user mode...
 	jne  .a2
-	swapgs                        ; Swap to the user's GS.
+	;swapgs                        ; Swap to the user's GS.
 .a2:
 	;mov ax, 0x10
 	pop  ax

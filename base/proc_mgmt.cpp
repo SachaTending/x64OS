@@ -73,7 +73,7 @@ void mgmt_syscall_ioctl(size_t handle, uint64_t req, void *s) {
 }
 
 size_t mgmt_syscall_read(size_t handle, void *buf, size_t count) {
-    log.debug("%lu: read(%lu, 0x%lx, %lu);\n", getpid(), handle, buf, count);
+    //log.debug("%lu: read(%lu, 0x%lx, %lu);\n", getpid(), handle, buf, count);
     proc_handle *handle2 = mgmt_find_handle(handle);
     if (handle2 == NULL) return;
     return handle2->node->read(handle2->node, buf, count);
@@ -83,7 +83,7 @@ size_t mgmt_syscall_seek(size_t handle, size_t seek_pos, int whence) {
     proc_handle *handle2 = mgmt_find_handle(handle);
     if (handle2 == NULL) return;
     size_t o = handle2->node->seek(handle2->node, seek_pos, whence);
-    log.debug("%lu: seek(%lu, %lu, %d) = %lu\n", getpid(), handle, seek_pos, whence, o);
+    //log.debug("%lu: seek(%lu, %lu, %d) = %lu\n", getpid(), handle, seek_pos, whence, o);
     return o;
 }
 
@@ -127,14 +127,14 @@ size_t mgmt_syscall_open(const char *path) {
     handle->id = proc->next_fd;
     proc->next_fd++;
     proc->handles.push(handle);
-    log.debug("%lu: file opened, fd: %lu\n", getpid(), handle->id);
+    //log.debug("%lu: file opened, fd: %lu\n", getpid(), handle->id);
     return handle->id;
 }
 
 void *mgmt_mmap(uintptr_t hint, size_t length, uint64_t flags, int fdnum, size_t offset) {
     vfs_node_t *node;
-    log.debug("mmap: hint: 0x%lx, length: %lu, flags: %lu, fdnum: %d, offset: %lu, prot: %lu, flags(real): %lu\n", hint, length, flags, fdnum, offset,
-        (int)flags >> 32, flags & 0xffffffff);
+    //log.debug("mmap: hint: 0x%lx, length: %lu, flags: %lu, fdnum: %d, offset: %lu, prot: %lu, flags(real): %lu\n", hint, length, flags, fdnum, offset,
+    //    (int)flags >> 32, flags & 0xffffffff);
     if (fdnum != -1) {
         node = mgmt_find_handle(fdnum)->node;
     }
@@ -144,7 +144,7 @@ void *mgmt_mmap(uintptr_t hint, size_t length, uint64_t flags, int fdnum, size_t
 int mgmt_set_tcb(void *ptr) {
     task_t *task = get_current_task();
     task->tls = (uint64_t)ptr;
-    log.info("%lu: set fs base to 0x%lx\n", getpid(), task->tls);
+    //log.info("%lu: set fs base to 0x%lx\n", getpid(), task->tls);
     wrmsr(0xc0000100, task->tls);
     return 0;
 }
@@ -200,7 +200,7 @@ int exec(const char *path, int argc, char *argv[], char *envp[]);
 size_t mgmt_syscall_exec(const char *path, char **argv, char **env) {
     int argc = 0;
     while (argv[argc] != NULL) {
-        log.debug("argv[%d]=0x%lx\n", argc, argv[argc]);
+        //log.debug("argv[%d]=0x%lx\n", argc, argv[argc]);
         argc++;
     }
     char **argv2 = new char*[argc];
@@ -217,7 +217,7 @@ size_t mgmt_syscall_exec(const char *path, char **argv, char **env) {
     for (int i=0;i<envc;i++) {
         env2[i] = (char *)strdup(env[i]);
     }
-    log.debug("argc: %d\n", argc);
+    //log.debug("argc: %d\n", argc);
     size_t ret = exec(path, argc, argv2, env2);
     // TODO: Free argv2 and env2
     return ret;

@@ -69,7 +69,6 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
         switch (phdr->p_type)
         {
             case PT_LOAD:
-                printf("pt_load\n");
                 // Load data from executable to memory
                 if (phdr->p_flags & PF_W or true) { // If segment is also writable...
                     vmm_flags |= PTE_WRITABLE; // Set PTE_WRITABLE flag
@@ -83,11 +82,9 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                 }
                 node->seek(node, phdr->p_offset, SEEK_SET);
                 phys += VMM_HIGHER_HALF;
-                log.debug("phys: 0x%lx\n", phys);
                 node->read(node, (void *)(((uint64_t)phys)+misalign), phdr->p_filesz);
                 break;
             case PT_INTERP:
-                printf("pt_interp\n");
                 // Interpeter information
                 if (ld_path == NULL) {
                     break;
@@ -95,10 +92,8 @@ LOADER_ERROR elf_load_prg(prg_loader_t *prg_loader, vfs_node_t *node, pagemap *p
                 *ld_path = new char[phdr->p_filesz+1];
                 node->seek(node, phdr->p_offset, SEEK_SET);
                 node->read(node, (void *)*ld_path, phdr->p_filesz);
-                printf("ld_path=%s\n", *ld_path);
                 break;
             case PT_PHDR:
-                printf("pt_phdr=0x%lx\n", phdr->p_vaddr);
                 aux->at_phdr = phdr->p_vaddr + load_base;
                 break;
             default:

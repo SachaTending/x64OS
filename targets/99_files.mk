@@ -1,4 +1,4 @@
-OBJ += freesans.o base/full_hd.o LICENSE.o
+OBJ += base/full_hd.o LICENSE.o
 
 freesans.o:
 	@echo "  [ GEN] freesans.o"

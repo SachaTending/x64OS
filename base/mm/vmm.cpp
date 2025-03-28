@@ -22,7 +22,7 @@ extern limine_hhdm_request hhdm2;
 #define INVALID_PHYS ((uint64_t)0xffffffffffffffff)
 
 #define VMM_HIGHER_HALF hhdm2.response->offset
-
+extern "C" uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate);
 void vmm_map_range(pagemap *pgm, uint64_t start, size_t count, uint64_t flags=PTE_PRESENT) {
     uint64_t start2 = ALIGN_DOWN(start, 4096);
     uint64_t end = ALIGN_UP(start+count, 4096);
@@ -51,7 +51,7 @@ struct pagemap *vmm_new_pagemap(void) {
         goto cleanup;
     }
 
-    pagemap->top_level = (void *)pagemap->top_level + VMM_HIGHER_HALF;
+    pagemap->top_level = (uint64_t)((void *)pagemap->top_level + VMM_HIGHER_HALF);
     if (krnl_page != 0) {
         for (size_t i = 256; i < 512; i++) {
             pagemap->top_level[i] = krnl_page->top_level[i];
@@ -64,6 +64,142 @@ cleanup:
         free(pagemap);
     }
 
+    return NULL;
+}
+
+static void destroy_level(uint64_t *pml, size_t start, size_t end, int level) {
+    if (level == 0) {
+        return;
+    }
+
+    for (size_t i = start; i < end; i++) {
+        uint64_t *next_level = get_next_level(pml, i, false);
+        if (next_level == NULL) {
+            continue;
+        }
+
+        destroy_level(next_level, 0, 512, level - 1);
+    }
+
+    pmm_free((void *)pml - VMM_HIGHER_HALF, 1);
+}
+
+void vmm_destroy_pagemap(struct pagemap *pagemap) {
+    //spinlock_acquire(&pagemap->lock);
+
+    while (pagemap->mmap_ranges.size() > 0) {
+        struct mmap_range_local *local_range = pagemap->mmap_ranges[0];
+
+        //munmap(pagemap, local_range->base, local_range->length);
+    }
+
+    spinlock_acquire(&pagemap->lock);
+
+    destroy_level(pagemap->top_level, 0, 256, 4);
+    free(pagemap);
+}
+#define MAP_SHARED	0x01
+void *pmm_alloc_nozero(size_t pages);
+struct pagemap *vmm_fork_pagemap(struct pagemap *pagemap) {
+    spinlock_acquire(&pagemap->lock);
+
+    struct pagemap *new_pagemap = vmm_new_pagemap();
+    if (new_pagemap == NULL) {
+        goto cleanup;
+    }
+
+    for (auto *it: pagemap->mmap_ranges) {
+        struct mmap_range_local *local_range = it;
+        struct mmap_range_global *global_range = local_range->global;
+
+        struct mmap_range_local *new_local_range = new struct mmap_range_local;
+        if (new_local_range == NULL) {
+            goto cleanup;
+        }
+
+        *new_local_range = *local_range;
+        // NOTE: Not present in vinix, in case of weird VMM bugs keep this line in mind :^)
+        new_local_range->pagemap = new_pagemap;
+
+        //if (global_range->res != NULL) {
+        //    global_range->res->refcount++;
+        //}
+
+        if ((local_range->flags & MAP_SHARED) != 0) {
+            global_range->locals.push_back(new_local_range);
+            for (uintptr_t i = local_range->base; i < local_range->base + local_range->length; i += PAGE_SIZE) {
+                uint64_t *old_pte = vmm_virt2pte(pagemap, i, false);
+                if (old_pte == NULL) {
+                    continue;
+                }
+
+                uint64_t *new_pte = vmm_virt2pte(new_pagemap, i, true);
+                if (new_pte == NULL) {
+                    goto cleanup;
+                }
+                *new_pte = *old_pte;
+            }
+        } else {
+            struct mmap_range_global *new_global_range = new struct mmap_range_global;
+            if (new_global_range == NULL) {
+                goto cleanup;
+            }
+
+            new_global_range->shadow_pagemap = vmm_new_pagemap();
+            if (new_global_range->shadow_pagemap == NULL) {
+                goto cleanup;
+            }
+
+            new_global_range->base = global_range->base;
+            new_global_range->length = global_range->length;
+            //new_global_range->res = global_range->res;
+            new_global_range->offset = global_range->offset;
+
+            new_global_range->locals.push_back(new_local_range);
+
+            if ((local_range->flags & MAP_ANONYMOUS) != 0) {
+                for (uintptr_t i = local_range->base; i < local_range->base + local_range->length; i += PAGE_SIZE) {
+                    uint64_t *old_pte = vmm_virt2pte(pagemap, i, false);
+                    if (old_pte == NULL || (PTE_GET_FLAGS(*old_pte) & PTE_PRESENT) == 0) {
+                        continue;
+                    }
+
+                    uint64_t *new_pte = vmm_virt2pte(new_pagemap, i, true);
+                    if (new_pte == NULL) {
+                        goto cleanup;
+                    }
+
+                    uint64_t *new_spte = vmm_virt2pte(new_global_range->shadow_pagemap, i, true);
+                    if (new_spte == NULL) {
+                        goto cleanup;
+                    }
+
+                    void *old_page = (void *)PTE_GET_ADDR(*old_pte);
+                    void *page = pmm_alloc_nozero(1);
+                    if (page == NULL) {
+                        goto cleanup;
+                    }
+
+                    memcpy(page + VMM_HIGHER_HALF, old_page + VMM_HIGHER_HALF, PAGE_SIZE);
+                    *new_pte = PTE_GET_FLAGS(*old_pte) | (uint64_t)page;
+                    *new_spte = *new_pte;
+                }
+            } else {
+                PANIC("Not an anonymous fork.");
+            }
+        }
+
+        new_pagemap->mmap_ranges.push_back(new_local_range);
+    }
+    
+    spinlock_release(&pagemap->lock);
+    return new_pagemap;
+
+cleanup:
+    spinlock_release(&pagemap->lock);
+    if (new_pagemap != NULL) {
+        vmm_destroy_pagemap(new_pagemap);
+    }
     return NULL;
 }
 

@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <ctype.h>
+extern long int syscall (long int __sysno, ...);
 
 #define RL_BUFF_SIZE 1024
 #define TK_BUFF_SIZE 64
@@ -55,12 +56,16 @@ char *trimws(char *);			//trim leading and trailing whitespaces
 char **split_pipes(char *);
 char *get_hist_file_path();
 
+int dash_tasks(char **) {
+	syscall(1024);
+	return 1;
+}
 
 /* array of builtin function pointers */
-int (*builtin_funcs[])(char **) = {&dash_cd, &dash_help, &dash_exit, &dash_history, &dash_grep, &args_length };
+int (*builtin_funcs[])(char **) = {&dash_cd, &dash_help, &dash_exit, &dash_history, &dash_grep, &args_length, &dash_tasks };
 
 /* string array of builtin commands for strcmp() before invoking execvp() */
-char *builtin_str[] = { "cd",  "help", "exit" , "history", "grep", "sizeof" };
+char *builtin_str[] = { "cd",  "help", "exit" , "history", "grep", "sizeof", "tasks" };
 
 /* return the size of the builtin array */
 int builtin_funcs_count()

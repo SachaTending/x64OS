@@ -40,9 +40,20 @@ void sys_print(const char *txt, uint64_t len) {
     for (uint64_t i=0;i<len;i++) putchar_(txt[i]);
 }
 uint8_t ps2_recv_dev();
+
+void tasks() {
+    task_t *t = root_task;
+    log.info("Task list:\n");
+    do {
+        if (t->fork_parent == 0) log.info("Task: %s PID: %u\n", t->name, t->pid);
+        else log.info("Task: %s PID: %u PPID: %u\n", t->name, t->pid, t->fork_parent->pid);
+        t = t->next;
+    } while (t != root_task);
+}
+
 void int80(idt_regs *regs, void *_) {
     (void)_;
-    log.debug("SYSCALL: %u RIP: 0x%lx\n", regs->rax, regs->rcx);
+    log.debug("SYSCALL: %u RIP: 0x%lx RSP: 0x%lx\n", regs->rax, regs->rcx, regs->rsp);
     switch (regs->rax)
     {
         case 0:
@@ -91,6 +102,10 @@ void int80(idt_regs *regs, void *_) {
         case 512:
             //printf("debug from process: %s\n", regs->rdi);
             printf("debug: %s\n", regs->rdi);
+            break;
+        case 1024:
+            regs->rax = 0;
+            tasks();
             break;
         default:
             log.debug("unknown syscall: %u\n", regs->rax);

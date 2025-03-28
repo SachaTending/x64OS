@@ -24,6 +24,7 @@ void vmm_switch_to(struct pagemap *pagemap);
 #define PTE_PRESENT (1ull << 0ull)
 #define PTE_WRITABLE (1ull << 1ull)
 #define PTE_USER (1ull << 2ull)
+#define PTE_NOCACHE (1ull << 4ull)
 uintptr_t vmm_virt2phys(struct pagemap *pagemap, uintptr_t virt);
 
 #define GET_CURRENT_PGM() (get_current_task()->pgm)

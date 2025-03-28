@@ -20,24 +20,24 @@ int exec(const char *path, int argc, char **argv, char **envp) {
     uint64_t tls;
     auxval *aux = new auxval;
     LOADER_ERROR ret = load_program(path, pgm, &ld_path, &entry, &tls, aux);
-    printf("===================\nat_entry: 0x%lx\nat_phdr: 0x%lx\nat_phent: 0x%lx\nat_phnum: 0x%lx\n", aux->at_entry, aux->at_phdr, aux->at_phent, aux->at_phnum);
+    //printf("===================\nat_entry: 0x%lx\nat_phdr: 0x%lx\nat_phent: 0x%lx\nat_phnum: 0x%lx\n", aux->at_entry, aux->at_phdr, aux->at_phent, aux->at_phnum);
     //printf("program loader return: ld_path: %s(0x%lx), entry: 0x%lx, ret: %d\n", ld_path, ld_path, entry, ret);
     auxval *taux = 0;
     if (ld_path != NULL) {
         taux = new auxval;
-        printf("Executable uses linker, (EXPERIMENTAL) loading %s...\n", ld_path);
+        //printf("Executable uses linker, (EXPERIMENTAL) loading %s...\n", ld_path);
         //auxval *taux = new auxval;
         LOADER_ERROR ret = load_program(ld_path, pgm, &ld_path, &entry, &tls, taux, 0x40000000);
-        printf("===================\nat_entry: 0x%lx\nat_phdr: 0x%lx\nat_phent: 0x%lx\nat_phnum: 0x%lx\n", aux->at_entry, aux->at_phdr, aux->at_phent, aux->at_phnum);
+        //printf("===================\nat_entry: 0x%lx\nat_phdr: 0x%lx\nat_phent: 0x%lx\nat_phnum: 0x%lx\n", aux->at_entry, aux->at_phdr, aux->at_phent, aux->at_phnum);
     }
     if (ret != LOADER_OK) {
         if (ret == LOADER_FILE_NOT_FOUND) {
-            printf("/init not found.\n");
+            //printf("/init not found.\n");
         }
         printf("ret=%u\n", ret);
         delete pgm->top_level;
         delete pgm;
-        start_sched();
+        resume_sched();
         return -1;
     }
     uint64_t pid=0;

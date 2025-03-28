@@ -25,16 +25,28 @@ extern uint64_t used_pages;
 static size_t get_used_ram() {
     return used_ram;
 }
-void pre_log() {
-    //asm volatile ("cld");
+void pre_log2() {
     stop_sched();
 }
 
-void post_log() {
+void post_log2() {
     resume_sched();
-    //asm volatile ("sti");
+}
+static inline unsigned long save_irqdisable(void)
+{
+    unsigned long flags;
+    asm volatile ("pushf\n\tcli\n\tpop %0" : "=r"(flags) : : "memory");
+    return flags;
 }
 
+static inline void irqrestore(unsigned long flags)
+{
+    asm ("push %0\n\tpopf" : : "rm"(flags) : "memory","cc");
+}
+
+#define pre_log()  pre_log2()
+
+#define post_log()  post_log2()
 void Logger::info(const char *msg, ...) {
     pre_log();
     printf("\e[97m[INFO][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);

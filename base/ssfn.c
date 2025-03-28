@@ -146,30 +146,6 @@ void ssfn_setup(struct limine_framebuffer *frb) {
         0
     );
     frb2 = frb;
-    ctx = (ssfn_t *)malloc(sizeof(ssfn_t));
-    ssfn_font_t * fnt = (ssfn_font_t *)&_binary_freesans_sfn_start;
-    ssfn_src = fnt;
-#if 0
-    ssfn_buf_t *buf2 = &ssfn_dst;
-    buf2->fg = 0xFFFFFF;
-    buf2->bg = RGB(1, 1, 1);
-    buf2->p = frb->pitch;
-    buf2->h = frb->height;
-    buf2->w = frb->width;
-    buf2->ptr = (uint8_t *)frb->address;
-    buf2->x = buf2->y = 0;
-    buf = *buf2;
-#else
-    ssfn_dst.fg = 0xFFFFFFFF;
-    ssfn_dst.bg = 1;
-    ssfn_dst.p = frb->pitch;
-    ssfn_dst.h = frb->height;
-    ssfn_dst.w = frb->width;
-    ssfn_dst.ptr = (uint8_t *)frb->address;
-    ssfn_dst.x = ssfn_dst.y = 0;
-    ssfn_dst.y = 10;
-    ssfn_load(ctx, (const void *)&_binary_freesans_sfn_start);
-#endif
     printf("\e[97m");
     //printf("ssfn_term: initialized, fb: %dx%dx%d fb_ptr: 0x%lx fb2_ptr: 0x%lx\n", frb->width, frb->height, frb->bpp, frb->address, fb2);
     //printf("ssfn_term: font size %dx%d\n", ssfn_src->width, ssfn_src->height);
