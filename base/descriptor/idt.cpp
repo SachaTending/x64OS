@@ -47,6 +47,7 @@ struct idt_h
 {
     idt_handl func;
     void *priv;
+    size_t count;
 };
 
 
@@ -135,7 +136,11 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
             printf("regs->ds=0x%x\n", regs->ds);
             printf("regs->es=0x%x\n", regs->es);
             printf("frame->frame->rip=0x%lx\n", frame->rsp->rip);
-            printf("frame->frame->frame->rip=0x%lx\n", frame->rsp->rip);
+            printf("frame->frame->rsp=0x%lx\n", frame->rsp->rsp);
+            printf("frame->frame->frame->rip=0x%lx\n", frame->rsp->rsp->rip);
+            printf("frame->frame->frame->frame->rip=0x%lx\n", frame->rsp->rsp->rsp->rip);
+            regs->cs = 9*8 | 3;
+            regs->ss = 10*8 | 3;
             regs->ds = regs->es = regs->ss;
             //regs->es = regs->ds = 7*8;
             return regs;
@@ -171,15 +176,21 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     }
     if (idt_handls[regs->IntNumber-MAP_BASE].func) {
         idt_handls[regs->IntNumber-MAP_BASE].func(regs, idt_handls[regs->IntNumber-MAP_BASE].priv);
+        if (get_current_task()) {
+            if (get_current_task()->fork_parent) {
+                log.info("RIP: 0x%lx RSP: 0x%lx RIP: 0x%lx RSP: 0x%lx\n", get_current_task()->regs.rip, get_current_task()->regs.rsp, regs->rip, regs->rsp);
+            }
+        }
+        idt_handls[regs->IntNumber-MAP_BASE].count++;
     } else {
-        printf("WARNING: Unknown int %u\n", regs->IntNumber);
+        log.warn("WARNING: Unknown int %u\n", regs->IntNumber);
         stacktrace(0);
     }
     if (is_lapic_enabled) lapic_eoi();
     else eoi(regs->IntNumber);
     uint64_t a = ((uint64_t)6*8) << 48;
     a |= (uint64_t)((uint64_t)0x28 << 32);
-    wrmsr(0xc0000081, a);
+    //wrmsr(0xc0000081, a);
     task_t *task = get_current_task();
     if (task == NULL or task->regs.cs == 0) {
         return regs;

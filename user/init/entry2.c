@@ -25,7 +25,7 @@ char *buf;
 int64_t fd;
 #define S 80*1024
 #define JUNK_OFF 1024
-#define SAMP_RATE 8000
+#define SAMP_RATE 44100
 char b2[S] = {0};
 extern char _binary_rain_eater_xm_start;
 extern char _binary_rain_eater_xm_end;
@@ -52,16 +52,18 @@ void tracker_test() {
     fd = open("/dev/dsp", O_WRONLY);
     //int fd2 = open("/rain_eater.pcm", O_RDONLY);
     ioctl(fd, 1, SAMP_RATE);
-    //while (xmp_play_frame(c) == 0) {
+    while (xmp_play_frame(c) == 0) {
         //read(fd2, (void *)buf+JUNK_OFF, S-JUNK_OFF);
-        //xmp_get_frame_info(c, &mi);
+        xmp_get_frame_info(c, &mi);
         //printf("frame: 0x%lx %d\n", mi.buffer, mi.buffer_size);
-        //if (mi.loop_count > 0)    /* exit before looping */
-        //    break;
-        //write(fd, (void *)mi.buffer, mi.buffer_size);
-    //}
+        if (mi.loop_count > 0)    /* exit before looping */
+            break;
+        write(fd, (void *)mi.buffer, mi.buffer_size);
+    }
 }
 int main(int argc, char **argv) {
+    //tracker_test();
+    //for(;;);
     //puts("Hello, C World!\n");
     ////puts("For now, all applications should use syscall for syscalls.\n"); early port of mlibc is avaible
     //fd = open("/Makefile", O_RDONLY);

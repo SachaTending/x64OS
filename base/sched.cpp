@@ -158,9 +158,9 @@ void create_task(int (*task)(),
         new_task->regs.rax = 0;
         //new_task->regs.rcx = (uint64_t)task;
         //new_task->regs.ds = new_task->regs.es = new_task->regs.ss = (7*8) | 3;
-        new_task->regs.ss = (7*8) | 3;
-        new_task->regs.es = new_task->regs.ds = (7*8);
-        new_task->regs.cs = (8*8) | 3;
+        new_task->regs.ss = (10*8) | 3;
+        new_task->regs.es = new_task->regs.ds = (10*8) | 3;
+        new_task->regs.cs = (9*8) | 3;
         uint64_t rsp = (uint64_t)pmm_alloc(STACK_SIZE/4096);
         new_task->stack_addr = (void *)rsp;
         vmm_map_range(pgm, rsp, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
@@ -425,16 +425,17 @@ int sched_fork(idt_regs *regs) {
         new_task->next = root_task;
         new_task->regs.rax = new_task->regs.rbx = 0;
         new_task->stack_addr = pmm_alloc(STACK_SIZE);
-        for (int i=0;i<256;i++) {
+        for (int i=0;i<512;i++) {
             new_task->pgm->top_level[i] = current_task2->pgm->top_level[i];
         }
         memcpy(new_task->stack_addr+VMM_HIGHER_HALF, current_task->stack_addr+VMM_HIGHER_HALF, STACK_SIZE);
         vmm_map_range2(new_task->pgm, (current_task->stack_addr), (new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE);
+        vmm_map_range(new_task->pgm, (new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE);
         new_task->cr3 = (uint64_t)((void *)new_task->pgm->top_level - VMM_HIGHER_HALF);
         printf("cr3[256]=0x%lx\n", new_task->pgm->top_level[256]);
         printf("new_task->cr3=0x%lx\n", new_task->cr3);
         _sched_stop_internal = false;
         return new_task->pid;
     }
-    return -1;
+    return 0;
 }

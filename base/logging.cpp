@@ -69,6 +69,7 @@ void Logger::error(const char *msg, ...) {
 }
 
 void Logger::debug(const char *msg, ...) {
+    return;
     pre_log();
     bool old_print_debug = print_debug;
     print_debug = 1;
@@ -79,5 +80,16 @@ void Logger::debug(const char *msg, ...) {
     va_end(lst);
     printf("\e[97m"); // switch fg to white
     print_debug = old_print_debug;
+    post_log();
+}
+
+void Logger::warn(const char *msg, ...) {
+    pre_log();
+    printf("\e[33m\e[1m[WARNING][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
+    va_list lst;
+    va_start(lst, msg);
+    vprintf_(msg, lst);
+    va_end(lst);
+    printf("\e[97m\e[0m"); // switch fg to white
     post_log();
 }

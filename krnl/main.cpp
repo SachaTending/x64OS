@@ -185,6 +185,11 @@ void devtmpfs_init();
 void start_modules();
 int krnl_task() {
     log.info("multitasking\n");
+    log.info("Logging test.\n");
+    log.warn("This is a warning.\n");
+    log.error("This is a error.\n");
+    log.debug("This is a debug.\n");
+    log.info("Debug log can be seen in serial console.\n");
     task_t *t = root_task;
     do {
         log.info("Task: %s PID: %u\n", t->name, t->pid);
@@ -291,9 +296,10 @@ void Kernel::Main() {
     //for(;;);
     log.info("Starting scheduler...\n");
     sched_init();
-    create_task(krnl_task, "task2", false);
+    //create_task(krnl_task, "task2", false);
     //create_task(krnl2_task, "task3(should exit)");
     //create_task(test_user_function, "usermode", true);
     start_sched();
+    krnl_task();
     for(;;);
 }

@@ -150,6 +150,8 @@ extern "C" {
     void laihost_log(int level, const char *msg) {
         if (level == 1) {
             lailog.info("%s\n", msg);
+        } else if (level == 2) {
+            lailog.warn("%s\n", msg);
         } else {
             lailog.info("%s\n", msg);
         }

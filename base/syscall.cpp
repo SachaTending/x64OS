@@ -93,6 +93,10 @@ void int80(idt_regs *regs, void *_) {
         case 13:
             regs->rax = sched_fork(regs);
             break;
+        case 14:
+            log.info("Simulating waitpid.\n");
+            for(;;) asm volatile ("hlt");
+            break;
         case 39:
             regs->rax = getpid();
             break;
