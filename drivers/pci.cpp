@@ -52,6 +52,38 @@ uint32_t pci_read(pci_dev_t dev, uint32_t field) {
     }
 }
 
+uint32_t pci_read_size(pci_dev_t dev, uint32_t field, uint8_t size) {
+    spinlock_acquire(&pci_spinlock);
+	// Only most significant 6 bits of the field
+	dev.field_num = (field & 0xFC);
+	dev.enable = 1;
+	outl(PCI_CONFIG_ADDR, (1 << 31) | (field & ~3) | (dev.function_num << 8) | (dev.device_num << 11) | (dev.bus_num << 16));
+    //log.debug("read: field=0x%08x bus=%u dev=%u func=%u\n", field, dev.bus_num, dev.device_num, dev.function_num);
+	// What size is this field supposed to be ?
+    uint32_t t = ind(0xcfc);
+    t >>= (field & 0x3) * 8;
+    switch (size)
+    {
+        case 1:
+            // Get the first byte only, since it's in little endian, it's actually the 3rd byte
+            spinlock_release(&pci_spinlock);
+            return (uint8_t)t;
+            break;
+        case 2:
+            spinlock_release(&pci_spinlock);
+		    return (uint16_t)t;
+            break;
+        case 4:
+            // Read entire 4 bytes
+            //t = inl(PCI_CONFIG_DATA);
+            spinlock_release(&pci_spinlock);
+            return t;
+        default:
+            return 0xFFFF;
+            break;
+    }
+}
+
 uint64_t pci_get_bar(int bar, pci_dev_t *dev) {
     uint32_t b = PCI_BAR0;
     switch (bar)

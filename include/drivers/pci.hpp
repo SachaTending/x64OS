@@ -60,3 +60,4 @@ void pci_register_driver(pci_driver_t *driver);
 uint32_t pci_read(pci_dev_t dev, uint32_t field);
 uint64_t pci_get_bar(int bar, pci_dev_t *dev);
 void pci_write(pci_dev_t dev, uint32_t field, uint32_t value);
+uint32_t pci_read_size(pci_dev_t dev, uint32_t field, uint8_t size);

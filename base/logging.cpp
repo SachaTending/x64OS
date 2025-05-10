@@ -69,7 +69,7 @@ void Logger::error(const char *msg, ...) {
 }
 
 void Logger::debug(const char *msg, ...) {
-    return;
+    //return;
     pre_log();
     bool old_print_debug = print_debug;
     print_debug = 1;

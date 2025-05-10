@@ -4,3 +4,9 @@
 [submodule "base/flanterm"]
 	path = base/flanterm
 	url = https://github.com/mintsuki/flanterm
+[submodule "basa/acpi/uacpi"]
+	path = basa/acpi/uacpi
+	url = https://github.com/uACPI/uACPI.git
+[submodule "base/acpi/uacpi"]
+	path = base/acpi/uacpi
+	url = https://github.com/uACPI/uACPI.git

@@ -99,7 +99,7 @@ extern "C" {
 #else
 #define trace(x) x
 #endif
-
+void uacpi_init();
 void acpi_init() {
     rsdp = (XSDP_t *)limine_rsdp.response->address;
     log.info("RSDP Location: 0x%016lx\n", rsdp);
@@ -127,8 +127,12 @@ void acpi_init() {
     log.info("Table addr: 0x%lx\n", table);
     tables = (table->Length - sizeof(ACPISDTHeader)) / div;
     log.debug("tables=%u\n", tables);
+#ifdef CONFIG_USE_LAI
     lai_set_acpi_revision(rsdp->Revision);
     lai_create_namespace();
+#else 
+    uacpi_init();
+#endif
     log.info("ACPI Initialized!\n");
 }
 

@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 void *memset (void *__s, int __c, size_t __n);
+void* memmove(void* dstptr, const void* srcptr, size_t size);
 int memcmp (const void *__s1, const void *__s2, size_t __n);
 void memcpy(void *dst, const void *src, size_t n);
 void * malloc(size_t size);

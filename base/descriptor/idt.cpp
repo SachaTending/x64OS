@@ -94,6 +94,10 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     if (regs->IntNumber == 14) {
         if (mmap_pf(regs)) {
         //if (true) {
+            //printf("regs->cs: 0x%lx\n", regs->cs);
+            //printf("regs->ss; 0x%lx\n", regs->ss);
+            regs->cs = 0x4b;
+            regs->ss = (10*8) | 3;
             //regs->ss = 0x3b;
             //regs->cs = (8 * 8) | 3;
             //printf("ss: 0x%lx cs: 0x%lx fs: 0x%lx\n", regs->ss, regs->cs, regs->fs);
@@ -108,8 +112,8 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
             wrmsr(0xc0000100, get_current_task()->tls);
             //log.debug("set msr 0xc0000100 to 0x%lx\n", rdmsr(0xc0000100));
             //log.debug("current task: 0x%lx, %s, %lu, tls: 0x%lx\n", get_current_task(), get_current_task()->name, get_current_task()->pid, get_current_task()->tls);
-            regs->ss = 0x3b;
-            regs->cs = (8 * 8) | 3;
+            regs->cs = 0x4b;
+            regs->ss = (10*8) | 3;
             return regs;
         }
     }
@@ -139,9 +143,12 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
             printf("frame->frame->rsp=0x%lx\n", frame->rsp->rsp);
             printf("frame->frame->frame->rip=0x%lx\n", frame->rsp->rsp->rip);
             printf("frame->frame->frame->frame->rip=0x%lx\n", frame->rsp->rsp->rsp->rip);
-            regs->cs = 9*8 | 3;
-            regs->ss = 10*8 | 3;
-            regs->ds = regs->es = regs->ss;
+            //regs->cs = 9*8 | 3;
+            //regs->ss = 10*8 | 3;
+            //regs->ds = regs->es = regs->ss;
+            frame->cs = 0x4B;  // USER_CS
+            frame->ss = 0x53;  // USER_SS
+            regs->ds = regs->es = 0x53; // USER_DATA
             //regs->es = regs->ds = 7*8;
             return regs;
         }

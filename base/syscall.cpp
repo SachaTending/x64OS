@@ -137,6 +137,7 @@ __attribute__((constructor)) void init_syscall() {
     wrmsr(0xc0000080, rdmsr(0xc0000080) | 1);
     uint64_t a = ((uint64_t)6*8) << 48;
     a |= (uint64_t)((uint64_t)0x28 << 32);
+    //uint64_t a = ((0x4B - 3) << 48) | (0x28 << 32);
     wrmsr(0xc0000081, a);
     //printf("msr 0xc0000081 = 0x%lx", a);
     wrmsr(0xC0000082, (uint64_t)syscall_entry);
