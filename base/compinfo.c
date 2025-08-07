@@ -12,3 +12,5 @@
 
 const char *compdate = __BUILD_TIMESTAMP; // timestamp of kernel
 const char *compmachine = __BUILD_USER "@" __BUILD_HOST;
+
+const char *kernel_version = "v0.0.1 ALPHA";

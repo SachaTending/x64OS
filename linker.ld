@@ -49,10 +49,13 @@ SECTIONS
         *(.data .data.*)
     } :data
 
+    . += CONSTANT(MAXPAGESIZE);
+    symtab_start = .;
     .symtab : {
-    /*    KEEP(*(.symtab));
-        KEEP(*(.dynsym));
-    */}
+        KEEP(*(.symtab));
+    }
+    . += CONSTANT(MAXPAGESIZE);
+    dynsym_start = .;
     .dynsym : {
         KEEP(*(.dynsym));
     }

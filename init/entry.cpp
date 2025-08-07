@@ -141,6 +141,7 @@ void stackwalk_init();
 extern "C" {
     extern const char *compdate;
     extern const char *compmachine;
+    extern const char *kernel_version;
 }
 void print_cpu();
 extern "C" size_t get_screen_size();
@@ -165,7 +166,7 @@ extern "C" void _start() {
     idt_init();
     ok();
     stackwalk_init();
-    printf("x64OS kernel, compiled on %s, machine: %s\nCopyright (C) 2024  TendingStream73 and contributors\nThis program comes with ABSOLUTELY NO WARRANTY\nThis is free software, and you are welcome to redistribute it under certain conditions\n", compdate, compmachine);
+    printf("x64OS kernel version %s, compiled on %s, machine: %s\nCopyright (C) 2025  TendingStream73 and contributors\nThis program comes with ABSOLUTELY NO WARRANTY\nThis is free software, and you are welcome to redistribute it under certain conditions\n", kernel_version, compdate, compmachine);
     printf("Please read about GPL V3\n");
     printf("Booted by %s version %s\n", btldr_info.response->name, btldr_info.response->version);
     printf("Running on %s system\n", efiTable.response ? "UEFI":"BIOS");

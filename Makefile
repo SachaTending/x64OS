@@ -3,7 +3,7 @@
 
 # Internal C flags that should not be changed by the user.
 USER=$(shell whoami)
-HOST=$(shell hostnamectl hostname)
+HOST=$(shell hostname)
 
 override CFLAGS += \
     -Wall \

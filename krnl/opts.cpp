@@ -69,7 +69,9 @@ bool check_val(const char *opt) {
     size_t i = 0;
     while (i < arr_size) {
         opt_t *opt2 = opts_array[i];
+        //printf("%s %s\n", opt, opt2->opt_name);
         if (!strcmp(opt2->opt_name, opt)) return true;
+        i++;
     }
     return false;
 }

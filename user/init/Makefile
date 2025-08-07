@@ -6,12 +6,12 @@ rain_eater.o:
 
 %.o: %.c
 	@echo "  [  CC] $@"
-	@gcc -o $@ $< -c -g -fpic -nostdinc -nostdlib -I ~/mlibc_base/usr/local/include
+	@gcc -o $@ $< -c -g -fpie -nostdinc -nostdlib -I ~/mlibc_base/usr/local/include
 
 %.o: %.asm
 	@echo "  [NASM] $@"
 	@nasm -felf64 -o $@ $< -g 
-.PHONY: init dash
+.PHONY: init
 init: $(OBJ)
 	@echo "  [  LD] init"
 	@gcc -o init $(OBJ) -g -nostdinc -nostdlib libc.a -L . -Wl,-dynamic-linker=/ld.so -static crt1.o ld.a libxmp.a libm.a *.a

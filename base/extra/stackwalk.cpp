@@ -76,7 +76,8 @@ void stacktrace(uintptr_t *s) {
     }
     printf("END OF STACK\n");
 }
-
+extern uint64_t symtab_start;
+extern uint64_t dynsym_start;
 void stackwalk_init() {
     Elf64_Ehdr *khdr = (Elf64_Ehdr *)krnl_file.response->kernel_file->address;
     if (memcmp(khdr, (const void *)ELFMAG, SELFMAG)) {
@@ -102,10 +103,10 @@ void stackwalk_init() {
         }
     }
     if (!strtab_real) {
-        printf("WARNING: .strtab(or .dynstr) not found.\n");
+        printf("WARNING: .strtab not found.\n");
     }
     if (!symtab) {
-        printf("WARNING: .symtab(or .dynsym) not found\n");
+        printf("WARNING: .symtab not found\n");
     }
     strtab_real += kaslr_off;
     symtab += kaslr_off;

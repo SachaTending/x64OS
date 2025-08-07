@@ -51,7 +51,7 @@ struct pagemap *vmm_new_pagemap(void) {
         goto cleanup;
     }
 
-    pagemap->top_level = (uint64_t)((void *)pagemap->top_level + VMM_HIGHER_HALF);
+    pagemap->top_level = (uint64_t *)((void *)pagemap->top_level + VMM_HIGHER_HALF);
     if (krnl_page != 0) {
         for (size_t i = 256; i < 512; i++) {
             pagemap->top_level[i] = krnl_page->top_level[i];

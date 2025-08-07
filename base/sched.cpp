@@ -13,7 +13,7 @@ static Logger log("Scheduler");
 
 size_t next_pid;
 
-task_t *root_task, *current_task;
+volatile task_t *root_task, *current_task;
 
 bool SCHED_STARTED = false;
 bool SCHED_READY = false;
@@ -329,6 +329,7 @@ task_t *sched_kill_task_by_state(task_t *task) {
     }
     return ntask;
 }
+void sched_fork2(idt_regs *regs, task_t *task_to_fork);
 void sched_handl(idt_regs *regs) {
     if (SCHED_STOP) return; // scheduler stopped
     if (_sched_stop_internal) return; // another flag
@@ -347,6 +348,11 @@ void sched_handl(idt_regs *regs) {
         SCHED_STARTED = true;
     }
     else save_regs(regs);
+    if (current_task->wants_to_fork) {
+        sched_fork2(regs, current_task);
+        log.debug("Task %d forked.\n", current_task->pid);
+        current_task->wants_to_fork = false;
+    }
     task_t *ntask;
     current_task->cr3 = read_cr3();
     vmm_switch_to(krnl_page);
@@ -385,33 +391,54 @@ void sched_handl(idt_regs *regs) {
 }
 void vmm_map_range2(pagemap *pgm, uint64_t start, uint64_t phys,size_t count, uint64_t flags=PTE_PRESENT) {
     uint64_t start2 = ALIGN_DOWN(start, 4096);
+    uint64_t phys2 = ALIGN_DOWN(phys, 4096);
     uint64_t end = ALIGN_UP(start+count, 4096);
     size_t pages = (end/4096)-(start/4096);
     pages += 1;
     //printf("start: 0x%lx, end: 0x%lx, pages to map: %lu\n", start2, end, pages);
     for (size_t i=0;i<pages;i++) {
-        vmm_map_page(pgm, start2+(i*4096), phys+(i*4096), flags);
-        vmm_map_page(pgm, (start2+(i*4096))+VMM_HIGHER_HALF, phys+(i*4096), flags);
-        //printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), start2+(i*4096));
+        vmm_map_page(pgm, start2+(i*4096), phys2+(i*4096), flags);
+        //vmm_map_page(pgm, (start2+(i*4096))+VMM_HIGHER_HALF, phys2+(i*4096), flags);
+        printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), phys2+(i*4096));
     }
 }
 struct pagemap *vmm_fork_pagemap(struct pagemap *pagemap);
 int sched_fork(idt_regs *regs) {
     task_t *current_task2 = current_task;
-    if (!current_task->fork_parent) {
-        _sched_stop_internal = true;
+    current_task2->wants_to_fork = true;
+    if (current_task->fork_parent) return -1;
+    //log.debug("Task %d wants to fork.\n", current_task->pid);
+    if (current_task->fork_parent) return -1;
+    while (current_task->wants_to_fork) {
+        if (current_task->fork_parent) return -1;
+        asm volatile ("hlt");
+    }
+    return current_task2->fork_ret;
+}
+
+void sched_fork2(idt_regs *regs, task_t *task_to_fork) {
+    // This code is garbage, it clones process, but fucks up cloned process's state
+    /*
+    task_t *current_task2 = task_to_fork;
+    if (!current_task2->fork_parent) {
         task *new_task = new task;
-        memcpy(new_task, current_task, sizeof(task));
-        new_task->fork_parent = current_task;
+        memcpy(new_task, current_task2, sizeof(task));
+        new_task->wants_to_fork = false;
+        memcpy(&new_task->regs, regs, sizeof(idt_regs));
+        printf("new_task->regs.rip: 0x%lx\nregs->rip: 0x%lx\nregs->rcx=0x%lx\n", new_task->regs.rip, regs->rip, regs->rcx);
+        //new_task->regs.ss = (10*8) | 3;
+        //new_task->regs.es = new_task->regs.ds = (10*8) | 3;
+        //new_task->regs.cs = (9*8) | 3;
+        new_task->fork_parent = current_task2;
         new_task->pid = next_pid;
         next_pid++;
-        memcpy(&new_task->regs, regs, sizeof(idt_regs));
-        printf("new_task->regs.rip: 0x%lx\nregs->rip: 0x%lx\n", new_task->regs.rip, regs->rip);
-        new_task->regs.ss = (10*8) | 3;
-        new_task->regs.es = new_task->regs.ds = (10*8) | 3;
-        new_task->regs.cs = (9*8) | 3;
-        //new_task->regs.rip = new_task->regs.rcx;
         new_task->pgm = vmm_fork_pagemap(current_task2->pgm);
+        if (new_task->pgm == NULL) {
+            log.error("Failed to fork PID %d: Failed to fork pagemap.\n", task_to_fork->pid);
+            task_to_fork->fork_ret = -1;
+            delete new_task;
+            return;
+        }
         uint64_t stack = (uint64_t)new_task->stack_addr;
         printf("stack: 0x%lx\n", stack);
         task_t *task_p = root_task;
@@ -423,19 +450,69 @@ int sched_fork(idt_regs *regs) {
         task_p->next = new_task; 
         new_task->last_task = true;
         new_task->next = root_task;
-        new_task->regs.rax = new_task->regs.rbx = 0;
+        //new_task->regs.rax = new_task->regs.rbx = 0;
         new_task->stack_addr = pmm_alloc(STACK_SIZE);
-        for (int i=256;i<512;i++) {
-            new_task->pgm->top_level[i] = current_task2->pgm->top_level[i];
+        for (int i=0;i<512;i++) {
+            if (new_task->pgm->top_level[i] == NULL) new_task->pgm->top_level[i] = current_task2->pgm->top_level[i];
         }
-        memcpy(new_task->stack_addr+VMM_HIGHER_HALF, current_task->stack_addr+VMM_HIGHER_HALF, STACK_SIZE);
-        vmm_map_range2(new_task->pgm, (current_task->stack_addr), (new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE);
-        vmm_map_range(new_task->pgm, (new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE);
+        vmm_map_range(new_task->pgm, vmm_virt2phys(new_task->pgm, new_task) , sizeof(task), PTE_USER | PTE_NOCACHE | PTE_PRESENT);
+        memcpy(new_task->stack_addr+VMM_HIGHER_HALF, current_task2->stack_addr+VMM_HIGHER_HALF, STACK_SIZE);
+        vmm_map_range2(new_task->pgm, (uint64_t)(current_task2->stack_addr), (uint64_t)(new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE | PTE_PRESENT);
+        //vmm_map_range(new_task->pgm, (uint64_t)(new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE);
         new_task->cr3 = (uint64_t)((void *)new_task->pgm->top_level - VMM_HIGHER_HALF);
         printf("cr3[256]=0x%lx\n", new_task->pgm->top_level[256]);
-        printf("new_task->cr3=0x%lx\n", new_task->cr3);
-        _sched_stop_internal = false;
-        return new_task->pid;
+        printf("regs->rbp=0x%lx\n", regs->rbp);
+        //new_task->regs.rsp = (uint64_t)new_task->stack_addr+((regs->rsp+8) - (uint64_t)current_task2->stack_addr); // Correct RSP
+        //new_task->regs.rbp = (uint64_t)new_task->stack_addr+((regs->rbp) - (uint64_t)current_task2->stack_addr); // Correct also RBP
+        printf("new_task->cr3=0x%lx\nnew_task->regs.rsp=0x%lx\nnew_task->regs.rip=0x%lx\n", new_task->cr3, new_task->regs.rsp, new_task->regs.rip);
+        printf("regs->rsp=0x%lx\n", regs->rsp+8);
+        printf("regs->rbp=0x%lx\nnew_task->regs.rbp=0x%lx\n", regs->rbp, new_task->regs.rbp);
+        printf("regs->rax=0x%lx new_task->regs.rax=0x%lx\n", regs->rax, new_task->regs.rax);
+        //return 0;
+        task_to_fork->fork_ret = new_task->pid;
+        return;
+    } else {
+        task_to_fork->fork_ret = -1;
     }
-    return 0;
+    task_to_fork->fork_ret = 0;
+    return;
+    */
+    // W.I.P Code
+    
+    if (task_to_fork->fork_parent) {
+        log.debug("Task PID %d requested fork, but it's a forked process.\n", task_to_fork->pid);
+        task_to_fork->fork_ret = -1;
+        return;
+    }
+    task_t *new_task = new task_t;
+    if (new_task == NULL) {
+        log.error("Failed to fork task PID %d: Failed to allocate task structure.\n", task_to_fork->pid);
+        task_to_fork->fork_ret = -1;
+        return;
+    }
+    new_task->fork_parent = task_to_fork;
+    new_task->last_task = true;
+    //task_to_fork->last_task = false;
+    new_task->mmap_anon_base = task_to_fork->mmap_anon_base;
+    new_task->name = strdup(task_to_fork->name);
+    new_task->next = (task_t *)root_task;
+    new_task->pgm = vmm_fork_pagemap(task_to_fork->pgm);
+    new_task->cr3 = new_task->pgm->top_level - VMM_HIGHER_HALF;
+    new_task->pid = next_pid;
+    new_task->usermode = task_to_fork->usermode;
+    next_pid++;
+    memcpy((void *)&(new_task->regs), (const void *)&regs, sizeof(idt_regs));
+    new_task->stack_addr = pmm_alloc(STACK_SIZE);
+    memcpy(new_task->stack_addr+VMM_HIGHER_HALF, task_to_fork->stack_addr+VMM_HIGHER_HALF, STACK_SIZE);
+    vmm_map_range2(new_task->pgm, (uint64_t)(task_to_fork->stack_addr), (uint64_t)(new_task->stack_addr), STACK_SIZE, PTE_USER | PTE_WRITABLE | PTE_PRESENT);
+    task_t *task_p = (task_t *)root_task;
+    do {
+        task_p = task_p->next;
+    } while(task_p->last_task != true); 
+    task_to_fork->last_task = false;
+    task_p->next = new_task;
+    task_to_fork->fork_ret = new_task->pid;
+    new_task->fork_ret = -1;
+    new_task->wants_to_fork = false;
+    return;
 }

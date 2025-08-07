@@ -55,8 +55,10 @@ typedef struct task {
     bool usermode;
     uint64_t cr3;
     task *fork_parent;
+    bool wants_to_fork;
+    int fork_ret;
 } task_t;
 
-extern task_t *root_task, *current_task;
+extern volatile task_t *root_task, *current_task;
 
 task_t *get_current_task();

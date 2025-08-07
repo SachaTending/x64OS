@@ -152,6 +152,11 @@ int_%1:
 global syscall_entry
 extern syscall_c_entry
 syscall_entry:
+	push qword 0x53 ; SS
+	push qword rsp ; RSP
+	pushfq ; flag
+	push qword 0
+	push qword rcx ; RIP
 	push qword 0
 	push qword 1024
 	push  rax
@@ -190,6 +195,10 @@ syscall_entry:
 	pop   rbx                              ; Pop the RBX register
 	pop   rax                              ; Pop the RAX register
 	add   rsp, 16                          ; Pop the interrupt number and the error code
+	pop qword rcx
+	add rsp, 8
+	popfq ; flags
+	add rsp, 16
 	sti
 	o64 sysret
 

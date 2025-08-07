@@ -53,6 +53,8 @@ void tasks() {
 
 void int80(idt_regs *regs, void *_) {
     (void)_;
+    bool old_state = get_current_task()->usermode;
+    get_current_task()->usermode = false;
     log.debug("SYSCALL: %u RIP: 0x%lx RSP: 0x%lx\n", regs->rax, regs->rcx, regs->rsp);
     switch (regs->rax)
     {
@@ -116,6 +118,7 @@ void int80(idt_regs *regs, void *_) {
             regs->rax = 0;
             break;
     }
+    get_current_task()->usermode = old_state;
     //regs->cs = 8*8 | 3;
     //regs->ss = 7*8 | 3;
 }

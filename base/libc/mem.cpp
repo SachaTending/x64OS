@@ -20,6 +20,7 @@ extern "C" {
         return __s;
     }
     void memcpy(void *dst, const void *src, size_t n) {
+        //asm volatile ("cli");
         if (n % 8 == 0) {
             //printf("memcpy(0x%lx, 0x%lx, %lu): doing accelerated uint64 memcpy.\n", dst, src, n);
             uint64_t *p1 = (uint64_t *)dst;

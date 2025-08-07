@@ -58,8 +58,8 @@ void eoi(uint8_t irq);
 #define errcode_13_shift (regs->ErrorCode >> 1)
 extern "C" void syscall_c_entry(idt_regs *);
 bool mmap_pf(idt_regs *regs);
-void on_page_fault(idt_regs *regs) {
-    printf("Got Page fault, flags: ");
+
+void print_page_fault_bits(idt_regs *regs) {
     #define is_bit_set(bit) (regs->ErrorCode & BIT(bit))
     if (is_bit_set(0)) {
         printf("Present ");
@@ -78,6 +78,11 @@ void on_page_fault(idt_regs *regs) {
     } if (is_bit_set(15)) {
         printf("Software guard exception ");
     }
+}
+
+void on_page_fault(idt_regs *regs) {
+    printf("Got Page fault, flags: ");
+    print_page_fault_bits(regs);
     printf("\n");
     printf("Address: 0x%lx\n", regs->cr2);
 }
@@ -86,12 +91,19 @@ void gdt_reload(void);
 extern bool is_lapic_enabled;
 void lapic_eoi();
 extern "C" idt_regs *idt_handler2(idt_regs *regs) {
-    if (regs->IntNumber != 32 and regs->IntNumber != 14) {
+    if ((regs->IntNumber != 32 and regs->IntNumber != 14) or (get_current_task() and get_current_task()->fork_parent)) {
     //if (regs->IntNumber != 32) {
     //if (1) {
-        log.debug("INT: %u, CS: 0x%lx CR2: 0x%lx, FS: 0x%lx, RIP: 0x%lx\n", regs->IntNumber, regs->cs,regs->cr2, regs->fs, regs->rip);
+        log.debug("INT: %u, CS: 0x%lx CR2: 0x%lx, FS: 0x%lx, RIP: 0x%lx RBP: 0x%lx RAX: 0x%lx\n", regs->IntNumber, regs->cs,regs->cr2, regs->fs, regs->rip, regs->rbp, regs->rax);
     }
     if (regs->IntNumber == 14) {
+        if (get_current_task()) {
+            if (get_current_task()->fork_parent) {
+                log.info("#PF Happened, CR2: 0x%lx RIP: 0x%lx RSP: 0x%lx RIP: 0x%lx RSP: 0x%lx Flags: 0x%lx(", regs->cr2, get_current_task()->regs.rip, get_current_task()->regs.rsp, regs->rip, regs->rsp, regs->ErrorCode);
+                print_page_fault_bits(regs);
+                printf(")\n");
+            }
+        }
         if (mmap_pf(regs)) {
         //if (true) {
             //printf("regs->cs: 0x%lx\n", regs->cs);
@@ -155,6 +167,12 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     }
     if (regs->IntNumber < 32) {
         printf("OH NO: INT_%u ERR=0x%04x\n", regs->IntNumber, regs->ErrorCode);
+        task_t *task = get_current_task();
+        if (task) {
+            printf("Thread: %lu(%s)", task->pid, task->name);
+            if (task->fork_parent) printf(" FORKED, parent: %lu", task->pid);
+            printf("\n");
+        }
         if (regs->IntNumber == 13) {
             printf("Got #GD: ");
             if (regs->ErrorCode & BIT(0)) {
@@ -198,10 +216,10 @@ extern "C" idt_regs *idt_handler2(idt_regs *regs) {
     uint64_t a = ((uint64_t)6*8) << 48;
     a |= (uint64_t)((uint64_t)0x28 << 32);
     //wrmsr(0xc0000081, a);
-    task_t *task = get_current_task();
-    if (task == NULL or task->regs.cs == 0) {
-        return regs;
-    }
+    //task_t *task = get_current_task();
+    //if (task == NULL or task->regs.cs == 0) {
+    //    return regs;
+    //}
     return regs;
 }
 

@@ -183,6 +183,7 @@ vfs_fs_t *tmpfs_create_fs();
 void unpack_initrd();
 void devtmpfs_init();
 void start_modules();
+void handle_eastereggs();
 int krnl_task() {
     log.info("multitasking\n");
     log.info("Logging test.\n");
@@ -248,9 +249,12 @@ int krnl_task() {
         const char *test_str = "Hello, world! Testing /dev/console.\n";
         n->write(n, (void *)test_str, strlen(test_str));
     }
+    handle_eastereggs();
     log.info("Starting /init...\n");
     const char *argv[] = {"/init", "test", NULL};
     const char *envp[] = {"LD_SHOW_AUXV=1", "HOME=/", NULL};
+    log.warn("THIS IS AN ALPHA SOFTWARE SO IT'S UNSTABLE AND CAN BREAK AT ANY TIME.\n");
+    log.warn("Also, shell can't run other programs because fork() is broken.\n");
     exec("/init", 2, argv, envp);
     for(;;) asm volatile ("hlt");
 }
