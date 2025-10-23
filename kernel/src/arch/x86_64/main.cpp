@@ -1,4 +1,6 @@
 #include <io/text.hpp>
+#define LIMINE_API_REVISION 3
+#include <limine.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <arch/vmm.h>
@@ -36,12 +38,18 @@ void Arch::Init() {
 extern limine_executable_address_request kernel_addr_request;
 extern uint64_t kernel_start;
 extern uint64_t kernel_end;
+
+uint64_t smp_bsp_lapic = 0;
+
+extern limine_mp_request smp_request;
+
 void pmm_on_vmm_enabled();
 void arch_gdt_init();
 void arch_idt_init();
 void Arch::InitStage2() {
     // This stage is only called when PMM is initialized
     // TendingStream73: I feel like this should be done by main kernel, not by arch-depended code
+    smp_bsp_lapic = smp_request.response->bsp_lapic_id;
     krnl_page = new pagemap;
     if (!krnl_page) {
         log.error("Failed to allocate pagemap for kernel.\n");
@@ -110,4 +118,8 @@ void Arch::InitStage2() {
 void Arch::InitACPI() {
     Arch::x86::ACPI::MadtSetup();
     Arch::x86::ACPI::LAPICSetup();
+}
+
+void Arch::InitTImer() {
+    Arch::x86::InitPIC();
 }

@@ -61,6 +61,8 @@ static uint64_t read_reg_64(uint64_t offset) {
 }
 void io_apic_set_irq_redirect(uint32_t lapic_id, uint8_t vector, uint8_t irq, bool status);
 bool try_to_init_hpet() {
+    log.error("HPET is currently broken, it just can't send interrupts, so HPET support is disabled.\n");
+    return false;
     uacpi_table hpet_addr;
     uacpi_status r = uacpi_table_find_by_signature("HPET", &hpet_addr);
     if (uacpi_unlikely_error(r)) {
@@ -86,8 +88,8 @@ bool try_to_init_hpet() {
     }
     write_reg_64(timer_configuration(1), (1 << 9) | (1 << 2));
     write_reg_64(timer_comparator(1), read_reg_64(0x0F0) + 10000);
-    io_apic_set_irq_redirect(0, 0, 4, true);
-    io_apic_set_irq_redirect(1, 0, 0, true);
+    io_apic_set_irq_redirect(0, 32, 0, true);
+    io_apic_set_irq_redirect(1, 32, 0, true);
     write_reg_64(0x10, read_reg_64(0x10) | (1 << 0)); // ENABLE_CNF
     return true;
 }

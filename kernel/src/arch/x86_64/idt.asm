@@ -9,7 +9,7 @@ int_%1:
 	push qword 0          ; Push a fake error code
 	%endif
 	cmp qword [rsp + 16], 0x4b  ; if user
-	swapgs
+	;swapgs
 	jne ._after_swap_gs
 ._after_swap_gs:
 	push qword 0x%1       ; Push the interrupt number
@@ -196,8 +196,10 @@ int_common:
     mov ss, eax
 
     mov rdi, rsp
-
+    xor rbp, rbp
     call idt_main_handler
+    ;mov rsp, rax
+    add rsp, 8 ; pop cr2
     pop rax
     mov ds, eax
     pop rax

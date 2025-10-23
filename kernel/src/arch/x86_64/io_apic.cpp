@@ -31,7 +31,7 @@ static struct madt_io_apic *io_apic_from_gsi(uint32_t gsi) {
     }
 
     //panic(NULL, true, "Cannot determine IO APIC from GSI %lu", gsi);
-    log.debug("io_apic_from_gsi(%lu): failed to find io apic\n", gsi);
+    log.error("io_apic_from_gsi(%lu): failed to find io apic\n", gsi);
     return -1;
 }
 

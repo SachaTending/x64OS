@@ -7,9 +7,11 @@ namespace Arch
 {
     void Init();
     void InitStage2();
-    void InitACPI(); // SHOULD BE CALLED AFTER UACPI INIT
+    void InitACPI(); // SHOULD BE CALLED AFTER UACPI INI
+    void InitTImer();
     namespace x86
     {
+        void InitPIC();
         namespace ACPI
         {
             void MadtSetup();
@@ -69,3 +71,5 @@ typedef frg::vector<madt_io_apic_irq_map *, frg::stl_allocator> madt_io_apic_irq
 extern madt_lapic_vec_t madt_lapic_vec; 
 extern madt_io_apic_vec_t madt_io_apic_vec;
 extern madt_io_apic_irq_map_vec_t madt_io_apic_irq_map_vec;
+
+#define MAXIMUM_INTS 256

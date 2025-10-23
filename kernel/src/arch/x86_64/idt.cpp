@@ -4,6 +4,7 @@
 #include <arch/interrupts.h>
 #include <logging.hpp>
 #include <arch/vmm.h>
+#include <krnl.hpp>
 
 static Logger log("IDT");
 
@@ -44,9 +45,10 @@ void arch_idt_init() {
         idt_set_gate_internal(int_lst[i], i);
     }
 	lidt((void *)&idt, sizeof(idt)-1);
+    asm volatile ("sti");
 }
-
-extern "C" void idt_main_handler(cpu_ctx *ctx) {
+void lapic_eoi();
+extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
     if (ctx->int_vector == 0xe) {
         log.debug("got pagefault\n");
         log.debug("addr: 0x%lx err: 0x%lx, rip: 0x%lx\n", ctx->cr2, ctx->err, ctx->rip);
@@ -56,12 +58,17 @@ extern "C" void idt_main_handler(cpu_ctx *ctx) {
             return;
         }
     }
-    printf("GOT INTERRUPT 0x%lx!!!\n", ctx->int_vector);
+    //printf("GOT INTERRUPT 0x%lx(%lu)!!!\n", ctx->int_vector, ctx->int_vector);
+    //printf("RSP: 0x%lx\n", ctx->rsp);
     if (ctx->int_vector < 32) {
         printf("CR2: 0x%lx\n", ctx->cr2);
         printf("RIP: 0x%lx\n", ctx->rip);
         printf("ERR: 0x%lx\n", ctx->err);
         printf("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx\n", ctx->cs, ctx->ss, ctx->ds, ctx->es);
         while (1);
+    } else {
+        Kernel::DispatchInterrupt(ctx, ctx->int_vector);
     }
+    lapic_eoi();
+    return ctx;
 }

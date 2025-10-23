@@ -52,6 +52,12 @@ volatile struct limine_rsdp_request rsdp_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+volatile struct limine_mp_request smp_request = {
+    .id = LIMINE_MP_REQUEST,
+    .revision = 0
+};
+
 // Finally, define the start and end markers for the Limine requests.
 // These can also be moved anywhere, to any .c file, as seen fit.
 
@@ -176,13 +182,15 @@ void kmain(void) {
     pre_sched_uacpi_init();
     Arch::InitACPI();
     // Initialize timers
-    bool r = try_to_init_hpet();
+    bool r = try_to_init_hpet(); // This is actually stupid, only x86 has HPET
     if (r == false) {
         // Well, no HPET, fallback to fastest platform timer
         /* Why we need fastest timer?
          * Well, for scheduling
          * We need to perform context switch so fast, that it will look like all threads are executing simualtenisly(sorry for bad english)
         */
+       log.info("Falling back to arch-specific timers\n");
+       Arch::InitTImer();
        // TODO
     }
     // TODO: Scheduler
