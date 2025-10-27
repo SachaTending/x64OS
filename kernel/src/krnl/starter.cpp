@@ -58,6 +58,13 @@ volatile struct limine_mp_request smp_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+volatile struct limine_module_request module_request = {
+    .id = LIMINE_MODULE_REQUEST,
+    .revision = 0,
+    .response = 0
+};
+
 // Finally, define the start and end markers for the Limine requests.
 // These can also be moved anywhere, to any .c file, as seen fit.
 
@@ -91,7 +98,7 @@ void *memmove(void *dest, const void *src, size_t n) {
     return dest;
 }
 
-int memcmp(const void *s1, const void *s2, size_t n) {
+int memcmp2(const void *s1, const void *s2, size_t n) {
     const uint8_t *p1 = (const uint8_t *)s1;
     const uint8_t *p2 = (const uint8_t *)s2;
 
@@ -154,7 +161,11 @@ void pmm_init(void);
 void pre_sched_uacpi_init();
 void init_uacpi();
 bool try_to_init_hpet();
+void TEST_init_sched();
+void TEST_sched_tick();
+void unpack_initrd();
 extern size_t regsitered_loggers;
+#include <vfs.hpp>
 void kmain(void) {
     Arch::Init();
     pmm_init();
@@ -202,12 +213,30 @@ void kmain(void) {
     log.info("Привет мир!\n");
     log.info("Это очень минимальный прототип ядра x64OS v2, здесь нет:\n");
     log.info("  - PS/2 драйвера, да и вообще подсистемы драйверов\n");
-    log.info("  - Мультизадачность\n");
-    log.info("  - VFS\n");
-    log.info("  - Обработка прерыванией(пока что только получение прерываний)\n");
+    log.info("  - Возможность загрузки и запуска программ\n");
     log.info("fun fact: обычный flanterm не может отображать UTF-8 текст, я модифицировал его и добавил туда ssfn, для отображения такого текста\n");
     log.info("Текущие параметры экрана: %dx%dx%d\n", framebuffer->width, framebuffer->height, framebuffer->bpp);
     log.info("fun fact 2: В ядре иниицализировано %lu логгеров\n", regsitered_loggers);
+    VFS::Init();
+    VFS::Mount(vfs_root, NULL, "/", "tmpfs");
+    VFS::Create(vfs_root, "/dev", 0755 | S_IFDIR);
+    unpack_initrd();
+    log.info("Trying to read file from VFS...\n");
+    vfs_node_t *node = VFS::GetNode(vfs_root, "/hi.txt", true);
+    if (node == false) {
+        log.error("Failed to get file, is it unpacked?\n");
+    } else {
+        log.info("Successfully opened file /hi.txt!\n");
+        log.info("File contents: ");
+        char buf[16384];
+        memset(buf, 0, 200);
+        node->resource->read(node->resource, NULL, buf, 0, 180);
+        printf(buf);
+        printf("\n");
+        log.info("File has been read successfully\n");
+    }
+    //TEST_init_sched();
+    //for (int i=0;i<10;i++) TEST_sched_tick();
     hcf();
 }
 

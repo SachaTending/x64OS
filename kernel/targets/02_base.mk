@@ -6,6 +6,7 @@ obj-y += $(addprefix base/, \
 	uacpi_integration.cpp \
 	hpet.cpp \
 	cxx_runtime.cpp \
+	sched.cpp \
 )
 
 # IO
@@ -22,4 +23,12 @@ obj-y += $(addprefix base/flanterm/, \
 # Memory stuff
 obj-y += $(addprefix base/memory/, \
 	pmm.cpp \
+)
+
+# Filesystem
+obj-y += $(addprefix base/fs/, \
+	vfs.cpp \
+	tmpfs.cpp \
+	resource.cpp \
+	initrd_unpacker.cpp \
 )

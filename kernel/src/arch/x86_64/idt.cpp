@@ -72,3 +72,11 @@ extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
     lapic_eoi();
     return ctx;
 }
+
+
+void idt_set_global_ist(uint8_t ist) {
+    for (int i=0;i<256;i++) {
+        //if (idte[i].IST != 0) continue;
+        idt[i].ist = ist;
+    }
+}

@@ -69,7 +69,7 @@ extern "C" {
             return NULL;
         }
 
-        top_level[idx] = (uint64_t)next_level | PTE_PRESENT | PTE_WRITABLE;
+        top_level[idx] = (uint64_t)next_level | PTE_PRESENT | PTE_WRITABLE | PTE_USER;
         return (uint64_t *)((uint64_t)next_level + VMM_HIGHER_HALF);
     }
     uint64_t *vmm_virt2pte(struct pagemap *pagemap, uintptr_t virt, bool allocate) {

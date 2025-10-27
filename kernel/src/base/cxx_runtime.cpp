@@ -4,6 +4,10 @@ void *operator new(unsigned long size) {
     return malloc(size);
 }
 
+void *operator new[](unsigned long size) {
+    return malloc(size);
+}
+
 void operator delete(void *ptr) {
     free(ptr);
 }

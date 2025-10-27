@@ -16,12 +16,29 @@ struct gdt_struct {
     uint8_t  base_high8 = 0;
 };
 
-gdt_struct __attribute__((packed)) gdt_descs[11];
+struct tss_descriptor {
+    uint16_t length = 0;
+    uint16_t base_low16 = 0;
+    uint8_t  base_mid8 = 0;
+    uint8_t  flags1 = 0;
+    uint8_t  flags2 = 0;
+    uint8_t  base_high8 = 0;
+    uint32_t base_upper32 = 0;
+    uint32_t reserved = 0;
+};
+
+struct gdt_desc {
+    gdt_struct descs[10];
+    tss_descriptor tss;
+};
+
+gdt_desc gdt_d = {0};
 gdt_ptr gdtr;
 void gdt_reload();
 void arch_gdt_init() {
     // TODO: Populate GDT
     // Null descriptor.
+    #define gdt_descs gdt_d.descs
     gdt_descs[0].limit       = 0;
     gdt_descs[0].base_low16  = 0;
     gdt_descs[0].base_mid8   = 0;
@@ -108,10 +125,35 @@ void arch_gdt_init() {
     gdt_descs[10].granularity = 0;
     gdt_descs[10].base_high8  = 0;
 
-    gdtr.base = (uint64_t)&gdt_descs;
-    gdtr.limit = (11*8) - 1;
+
+    gdt_d.tss.length       = 104;
+    gdt_d.tss.base_low16   = 0;
+    gdt_d.tss.base_mid8    = 0;
+    gdt_d.tss.flags1       = 0b10001001;
+    gdt_d.tss.flags2       = 0;
+    gdt_d.tss.base_high8   = 0;
+    gdt_d.tss.base_upper32 = 0;
+    gdt_d.tss.reserved     = 0;
+
+    gdtr.base = (uint64_t)&gdt_d;
+    gdtr.limit = (sizeof(gdt_d)) - 1;
     printf("kdata offset: 0x%lx\nkcode offset: 0x%lx\n",  ((uint64_t)&gdt_descs[6]) - ((uint64_t)&gdt_descs), ((uint64_t)&gdt_descs[5]) - ((uint64_t)&gdt_descs));
     gdt_reload();
+}
+extern "C" void load_tss(int desc);
+void gdt_set_tss(uint64_t tss) {
+    uint64_t addr = tss;
+    gdt_d.tss.base_low16   = (uint16_t)addr;
+    gdt_d.tss.base_mid8    = (uint8_t)(addr >> 16);
+    gdt_d.tss.flags1       = 0b10001001;
+    gdt_d.tss.flags2       = 0;
+    gdt_d.tss.base_high8   = (uint8_t)(addr >> 24);
+    gdt_d.tss.base_upper32 = (uint32_t)(addr >> 32);
+    gdt_d.tss.reserved     = 0;
+    //gdt_reload();
+    printf("11*8=%d\n", 11*8);
+    printf("tss offset: 0x%lx\n", offsetof(struct gdt_desc, tss));
+    asm volatile ("ltr %0" : : "rm" ((uint16_t)offsetof(struct gdt_desc, tss)) : "memory");
 }
 
 void gdt_reload(void) {

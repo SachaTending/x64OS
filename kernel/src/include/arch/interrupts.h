@@ -28,3 +28,5 @@ struct cpu_ctx {
     uint64_t rsp;
     uint64_t ss;
 };
+
+#define TIMER_INTERRUPT 32 // PIT's interrupt

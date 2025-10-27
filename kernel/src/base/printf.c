@@ -1387,12 +1387,18 @@ int vfctprintf(void (*out)(char c, void* extra_arg), void* extra_arg, const char
   return vsnprintf_impl(&gadget, format, arg);
 }
 
+#include <spinlock.h>
+
+spinlock_t printf_spl = SPINLOCK_INIT;
+
 int printf_(const char* format, ...)
 {
+  spinlock_acquire(&printf_spl);
   va_list args;
   va_start(args, format);
   const int ret = vprintf_(format, args);
   va_end(args);
+  spinlock_release(&printf_spl);
   return ret;
 }
 

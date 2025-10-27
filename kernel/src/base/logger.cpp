@@ -29,7 +29,7 @@ Logger::~Logger() {
 }
 
 extern size_t global_ticks;
-#define TICK 0
+#define TICK global_ticks
 void resume_sched();
 extern uint64_t used_ram;
 static size_t get_used_ram() {

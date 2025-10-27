@@ -9,9 +9,13 @@ extern "C" {
 int printf(const char *, ...);
 void *memset (void *__s, int __c, size_t __n);
 void memcpy(void *dst, const void *src, size_t n);
+int memcmp (const void *__s1, const void *__s2, size_t __n);
 size_t strlen(const char *str);
 const char *strdup(const char *in);
+int strncmp(const char *s1, const char *s2, size_t n);
+int strcmp(const char *s1, const char *s2);
 void *malloc(size_t);
+void *realloc(void *ptr, size_t l);
 void free(void *);
 void *pmm_alloc(size_t pages);
 
