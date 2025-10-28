@@ -23,6 +23,7 @@ obj-y += $(addprefix base/flanterm/, \
 # Memory stuff
 obj-y += $(addprefix base/memory/, \
 	pmm.cpp \
+	mmap.cpp \
 )
 
 # Filesystem
@@ -31,4 +32,10 @@ obj-y += $(addprefix base/fs/, \
 	tmpfs.cpp \
 	resource.cpp \
 	initrd_unpacker.cpp \
+)
+
+# Program loading
+obj-y += $(addprefix base/prg/, \
+	lol_loader.cpp \
+	elf_loader.cpp \
 )

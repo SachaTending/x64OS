@@ -6,6 +6,36 @@ static Logger log("VMM");
 extern "C" {
     void *pmm_alloc(size_t pages);
     uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate);
+    struct pagemap *vmm_new_pagemap(void) {
+        struct pagemap *pagemap = new struct pagemap;
+        if (pagemap == NULL) {
+            //errno = ENOMEM;
+            goto cleanup;
+        }
+
+        pagemap->lock = (spinlock_t)SPINLOCK_INIT;
+        pagemap->top_level = (uint64_t *)pmm_alloc(1);
+        if (pagemap->top_level == NULL) {
+            //errno = ENOMEM;
+            goto cleanup;
+        }
+
+        pagemap->top_level = (uint64_t *)((void *)pagemap->top_level + VMM_HIGHER_HALF);
+        if (krnl_page != 0) {
+            for (size_t i = 0; i < 512; i++) {
+                pagemap->top_level[i] = krnl_page->top_level[i];
+            }
+        }
+        return pagemap;
+
+    cleanup:
+        if (pagemap != NULL) {
+            free(pagemap);
+        }
+
+        return NULL;
+    }
+
     bool vmm_map_page(struct pagemap *pagemap, uintptr_t virt, uintptr_t phys, uint64_t flags) {
         if (pagemap == NULL) return false;
         spinlock_acquire(&(pagemap->lock));
@@ -24,23 +54,27 @@ extern "C" {
         uint64_t *pml1 = 0;
         pml3 = get_next_level(pml4, pml4_entry, true);
         if (pml3 == NULL) {
+            log.error("Failed to get pml3\n");
             goto cleanup;
         }
         //debug("got pml3 %lp ", pml3);
         pml2 = get_next_level(pml3, pml3_entry, true);
         if (pml2 == NULL) {
+            log.error("Failed to get pml2\n");
             goto cleanup;
         }
         //debug("got pml2, ", 1);
         pml1 = get_next_level(pml2, pml2_entry, true);
         if (pml1 == NULL) {
+            log.error("Failed to get pml1\n");
             goto cleanup;
         }
         //debug("got pml1, ", 1);
 
-        if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
-            goto cleanup;
-        }
+        //if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
+        //    //log.error("Entry for addr 0x%lx already present.\n", virt);
+        //    goto cleanup;
+        //}
 
         ok = true;
         //printf("map: ok, ");

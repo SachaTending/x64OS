@@ -60,11 +60,21 @@ extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
     }
     //printf("GOT INTERRUPT 0x%lx(%lu)!!!\n", ctx->int_vector, ctx->int_vector);
     //printf("RSP: 0x%lx\n", ctx->rsp);
+    if (ctx->int_vector == 1) {
+        // The DEBUG Exception can occur sometimes, we just gonna ignore that bcz, well, we don't even have subsystem for debugging.
+        return ctx;
+    }
     if (ctx->int_vector < 32) {
+        printf("Vector: 0x%lx(%lu\n)", ctx->int_vector, ctx->int_vector);
         printf("CR2: 0x%lx\n", ctx->cr2);
         printf("RIP: 0x%lx\n", ctx->rip);
         printf("ERR: 0x%lx\n", ctx->err);
         printf("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx\n", ctx->cs, ctx->ss, ctx->ds, ctx->es);
+        if (ctx->int_vector) {
+            printf("Wait, DEBUG Exception? But... kernel doesn't have subsystem for that...\n");
+            printf("nvm, gonna ignore that.\n");
+            return ctx;
+        }
         while (1);
     } else {
         Kernel::DispatchInterrupt(ctx, ctx->int_vector);

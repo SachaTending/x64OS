@@ -1,9 +1,11 @@
+// THIS CODE IS COPIED FROM Lyre OS by mintsuki AND MODIFIED BY ME TO USE C++
 #include <vfs.hpp>
 #include <libc.h>
 #include <spinlock.h>
 #include <fs/resource.h>
 #include <sys/stat.h>
 #include <logging.hpp>
+#include <sched/sched.hpp>
 
 static Logger log("VFS");
 
@@ -330,4 +332,91 @@ cleanup:
     }
     spinlock_release(&vfs_lock);
     return ret;
+}
+
+struct f_descriptor *fd_from_fdnum(Scheduler::thread_t *proc, int fdnum) {
+    if (proc == NULL) {
+        proc = Scheduler::GetCurrentThread();
+    }
+
+    struct f_descriptor *ret = NULL;
+    spinlock_acquire(&proc->fds_lock);
+
+    if (fdnum < 0 || fdnum >= MAX_FDS) {
+        //errno = EBADF;
+        goto cleanup;
+    }
+
+    ret = proc->fds[fdnum];
+    if (ret == NULL) {
+        //errno = EBADF;
+        goto cleanup;
+    }
+
+    ret->description->refcount++;
+
+cleanup:
+    spinlock_release(&proc->fds_lock);
+    return ret;
+}
+
+static struct vfs_node *get_parent_dir(int dir_fdnum, const char *path) {
+    Scheduler::thread_t *thr = Scheduler::GetCurrentThread();
+
+    if (path != NULL && *path == '/') {
+        return vfs_root;
+    }
+
+    if (dir_fdnum == AT_FDCWD) {
+        return thr->cwd;
+    }
+
+    struct f_descriptor *fd = fd_from_fdnum(thr, dir_fdnum);
+    if (fd == NULL) {
+        return NULL;
+    }
+
+    struct f_description *description = fd->description;
+    if (!S_ISDIR(description->res->stat.st_mode)) {
+        errno = ENOTDIR;
+        return NULL;
+    }
+
+    return description->node;
+}
+
+bool vfs_fdnum_path_to_node(int dir_fdnum, const char *path, bool empty_path, bool enoent_error,
+                            struct vfs_node **parent, struct vfs_node **node, char **basename) {
+    if (!empty_path && (path == NULL || strlen(path) == 0)) {
+        errno = ENOENT;
+        return false;
+    }
+
+    struct vfs_node *parent_node = get_parent_dir(dir_fdnum, path);
+    if (parent == NULL) {
+        return false;
+    }
+
+    struct path2node_res res = path2node(parent_node, path);
+    if (res.target == NULL && (errno == ENOENT && enoent_error)) {
+        return false;
+    }
+
+    if (parent != NULL) {
+        *parent = res.target_parent;
+    }
+
+    if (node != NULL) {
+        *node = res.target;
+    }
+
+    if (basename != NULL) {
+        *basename = res.basename;
+    } else {
+        if (res.basename != NULL) {
+            free(res.basename);
+        }
+    }
+
+    return true;
 }

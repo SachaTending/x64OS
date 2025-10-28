@@ -1,13 +1,15 @@
 #include <arch/interrupts.h>
+#include <krnl.hpp>
 #include <libc.h>
 extern "C" int syscall_c_entry(cpu_ctx *ctx) {
-    printf("GOT SYSCALL\n");
-    printf("RIP: 0x%lx\n", ctx->rip);
-    if (ctx->rax == 512) {
-        printf("debug syscall: %s", ctx->rdi);
-    } else {
-        printf("wtf is syscall %d(0x%lx)\n", ctx->rax, ctx->rax);
-    }
+    //printf("GOT SYSCALL\n");
+    //printf("RIP: 0x%lx\n", ctx->rip);
+    //if (ctx->rax == 512) {
+    //    printf("debug syscall: %s", ctx->rdi);
+    //} else {
+    //    printf("wtf is syscall %d(0x%lx)\n", ctx->rax, ctx->rax);
+    //}
+    Kernel::HandleSyscall(ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx);
     return 0;
 }
 extern "C" void syscall_entry();

@@ -109,6 +109,7 @@ void pmm_init(void) {
     log.debug("pmm: Highest address: %lx\n", highest_addr);
     log.debug("pmm: Bitmap size: %lu bytes\n", bitmap_size);
 
+    memmap->entries[0]->type = LIMINE_MEMMAP_RESERVED;
     // Find a hole for the bitmap in the memory map.
     for (size_t i = 0; i < memmap->entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
@@ -118,7 +119,7 @@ void pmm_init(void) {
         }
 
         if (entry->length >= bitmap_size) {
-            bitmap = (uint8_t *)(entry->base + hhdm->offset);
+            bitmap = (uint8_t *)(((uint64_t)entry->base) + hhdm->offset);
 
             // Initialise entire bitmap to 1 (non-free)
             memset(bitmap, 0xff, bitmap_size);
@@ -129,6 +130,11 @@ void pmm_init(void) {
             break;
         }
     }
+    if (bitmap == NULL) {
+        log.error("Failed to find region for bitmap, how tf is this even possible?\n");
+    } else {
+        log.debug("Using bitmap at 0x%lx", bitmap - VMM_HIGHER_HALF);
+    }
 
     // Populate free bitmap entries according to the memory map.
     for (size_t i = 0; i < memmap->entry_count; i++) {
@@ -137,14 +143,16 @@ void pmm_init(void) {
         if (entry->type != LIMINE_MEMMAP_USABLE) {
             continue;
         }
+        log.debug("usable: 0x%lx-0x%lx, size: %lu\n", entry->base, entry->base+entry->length, entry->length);
 
         for (uint64_t j = 0; j < entry->length; j += PAGE_SIZE) {
             bitmap_reset(bitmap, (entry->base + j) / PAGE_SIZE);
+            //log.debug("0x%lx is now free.\n", entry->base+j);
         }
     }
 
-    //log.debug("pmm: Usable memory: %luMiB\n", (usable_pages * 4096) / 1024 / 1024);
-    //log.debug("pmm: Reserved memory: %luMiB\n", (reserved_pages * 4096) / 1024 / 1024);
+    log.debug("pmm: Usable memory: %luMiB\n", (usable_pages * 4096) / 1024 / 1024);
+    log.debug("pmm: Reserved memory: %luMiB\n", (reserved_pages * 4096) / 1024 / 1024);
     slab_init();
 }
 static const char *memmap_type_str(int t) {
@@ -200,7 +208,7 @@ static void *inner_alloc(size_t pages, uint64_t limit) {
             p = 0;
         }
     }
-    log.debug("inner_alloc(pages=%lu, limit=%lu): Allocation failed, no free pages(no free ram)\n");
+    log.debug("inner_alloc(pages=%lu, limit=%lu): Allocation failed, no free pages(no free ram)\n", pages, limit);
     return NULL;
 }
 
@@ -278,6 +286,7 @@ static inline struct slab *slab_for(size_t size) {
 
 static void create_slab(struct slab *slab, size_t ent_size) {
     //slab->lock = (spinlock_t)SPINLOCK_INIT;
+    log.debug("slab: creating slab with size %lu\n", ent_size);
     slab->first_free = (void **)(pmm_alloc_nozero(1) + VMM_HIGHER_HALF);
     slab->ent_size = ent_size;
 

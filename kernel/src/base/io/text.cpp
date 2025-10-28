@@ -10,6 +10,7 @@ extern "C" int print_debug;
 extern "C" void putc(char c) {
     if (p != nullptr) p(c);
     if (fl != nullptr && print_debug == 0) {
+    //if (fl != nullptr) {
         flanterm_write(fl, &c, 1);
     }
 }
@@ -29,8 +30,22 @@ void free2(void *p, size_t _unused) {
     free(p);
 }
 void setup_flanterm(struct limine_framebuffer *fb) {
-    fl = flanterm_fb_init(malloc,
-        free2,
+    //fl = flanterm_fb_init(malloc,
+    //    free2,
+    //    (uint32_t *)fb->address, fb->width, fb->height, fb->pitch,
+    //    fb->red_mask_size, fb->red_mask_shift,
+    //    fb->green_mask_size, fb->green_mask_shift,
+    //    fb->blue_mask_size, fb->blue_mask_shift,
+    //    NULL,
+    //    NULL, NULL,
+    //    NULL, NULL,
+    //    NULL, NULL,
+    //    NULL, 0, 0, 1,
+    //    1, 1,
+    //    0
+    //);
+    fl = flanterm_fb_init(NULL,
+        NULL,
         (uint32_t *)fb->address, fb->width, fb->height, fb->pitch,
         fb->red_mask_size, fb->red_mask_shift,
         fb->green_mask_size, fb->green_mask_shift,

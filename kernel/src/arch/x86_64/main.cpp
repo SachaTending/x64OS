@@ -27,8 +27,8 @@ void fpu_init() {
     asm("fninit");
 }
 static void early_serial_putc(char c) {
-    while ((inb(0x3f8 + 5) & 0x20) == 0);
-    outb(0x3f8, c);
+    //while ((inb(0x3f8 + 5) & 0x20) == 0);
+    //outb(0x3f8, c);
 }
 
 void Arch::Init() {

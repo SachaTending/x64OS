@@ -95,7 +95,7 @@ static void unpack_addr(void *file_addr) {
                 break;
             }
             case TAR_FILE_TYPE_GNU_LONG_PATH:
-                name_override = (void *)current_file + 512;
+                name_override = (char *)((uint64_t *)current_file + 512);
                 name_override[size] = 0;
                 break;
         }
@@ -106,7 +106,7 @@ static void unpack_addr(void *file_addr) {
 
         pmm_free((void *)current_file - VMM_HIGHER_HALF, (512 + ALIGN_UP(size, 512)) / PAGE_SIZE);
 
-        current_file = (tar *)(void *)current_file + 512 + ALIGN_UP(size, 512);
+        current_file = (tar *)(void *)((uint64_t)current_file + 512 + ALIGN_UP(size, 512));
     }
 }
 

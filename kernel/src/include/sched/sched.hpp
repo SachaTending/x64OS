@@ -1,5 +1,8 @@
 #pragma once
 #include <arch/sched.hpp>
+#include <arch/vmm.h>
+#include <vfs.hpp>
+#include <spinlock.h>
 
 enum thread_state {
     STATE_NEW, // Thread is just created
@@ -9,6 +12,19 @@ enum thread_state {
     STATE_ZOMBIE, // Thread is currently shutting down
 };
 
+struct auxval {
+    uint64_t at_entry;
+    uint64_t at_phdr;
+    uint64_t at_phent;
+    uint64_t at_phnum;
+};
+
+enum syscall_set {
+    SYSCALL_SET_LINUX,
+    SYSCALL_SET_TRANS,
+    SYSCALL_SET_X64OS
+};
+#define MAX_FDS 256
 namespace Scheduler
 {
     typedef struct thread {
@@ -19,5 +35,16 @@ namespace Scheduler
         struct thread *next_thread;
         struct thread *prev_thread;
         uint64_t initial_stack;
+        pagemap *pgm;
+        uint64_t mmap_anon_base;
+        syscall_set syscall;
+        vfs_node_t *cwd;
+        spinlock_t fds_lock;
+        struct f_descriptor *fds[MAX_FDS];
     } thread_t;
+    void Init();
+    void CreateThread(const char *name, void (*entry)(), bool usermode=false, pagemap *pgm=krnl_page);
+    void Start();
+    void Stop();
+    thread_t *GetCurrentThread();
 } // namespace Scheduler

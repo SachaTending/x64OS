@@ -18,6 +18,7 @@ void *malloc(size_t);
 void *realloc(void *ptr, size_t l);
 void free(void *);
 void *pmm_alloc(size_t pages);
+void pmm_free(void *addr, size_t pages);
 
 extern volatile limine_hhdm_request hhdm_request;
 #define VMM_HIGHER_HALF hhdm_request.response->offset

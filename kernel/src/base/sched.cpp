@@ -10,7 +10,7 @@ static Logger log("Scheduler");
 
 using namespace Scheduler;
 
-thread_t *root_theard;
+thread_t *root_thread;
 thread_t *current_thread;
 
 // How does this variable work: Each time when kernel stop schedulers, 1 adds to this variable, when kernel starts scheduler, 1 is substracted from this variable
@@ -24,16 +24,17 @@ static int allocate_pid() {
     return out;
 }
 
-void create_thread(const char *name, uint64_t entry, bool usermode=false) {
+void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode=false, pagemap *pgm) {
     sched_run++;
     thread_t *thr = new thread_t;
     thr->name = strdup(name);
     thr->pid = allocate_pid();
     thr->initial_stack = (uint64_t)new char[STACK_SIZE];
-    Arch::Scheduler::SetupSchedState(&thr->cpu_state, usermode, entry, thr->initial_stack+STACK_SIZE);
+    thr->pgm = pgm;
+    Arch::Scheduler::SetupSchedState(&thr->cpu_state, usermode, (uint64_t)entry, thr->initial_stack+STACK_SIZE);
     // Find latest thread
-    thread_t *tmp = root_theard;
-    while (tmp->next_thread != root_theard) {
+    thread_t *tmp = root_thread;
+    while (tmp->next_thread != root_thread) {
         tmp = tmp->next_thread;
     }
     log.debug("last thread: %s\n", tmp->name);
@@ -41,13 +42,13 @@ void create_thread(const char *name, uint64_t entry, bool usermode=false) {
     thr->next_thread = tmp->next_thread;
     tmp->next_thread = thr;
     thr->prev_thread = tmp;
-    root_theard->prev_thread = thr;
+    root_thread->prev_thread = thr;
     sched_run--;
 }
 
 thread_t *find_thread_by_pid(int pid) {
-    thread_t *tmp = root_theard;
-    while (tmp->next_thread != root_theard) {
+    thread_t *tmp = root_thread;
+    while (tmp->next_thread != root_thread) {
         if (tmp->pid == pid) return tmp;
         tmp = tmp->next_thread;
     }
@@ -69,7 +70,7 @@ void remove_and_destroy_thread(int pid) {
     prev->next_thread = next;
     next->prev_thread = prev;
 }
-void TEST_sched_tick(cpu_ctx *regs, void *_);
+void sched_tick(cpu_ctx *regs, void *_);
 
 void test1() {
     printf("Thread1 started.\n");
@@ -116,22 +117,47 @@ void TEST_init_sched() {
     root->pid = allocate_pid();
     root->initial_stack = (uint64_t)new char[STACK_SIZE];
     Arch::Scheduler::SetupSchedState(&root->cpu_state, false, (uint64_t)test1, root->initial_stack);
-    root_theard = root;
+    root_thread = root;
     current_thread = root;
-    root_theard->prev_thread = root_theard;
-    root_theard->next_thread = root_theard;
-    create_thread("TEST2", (uint64_t)test2);
-    create_thread("TEST3", (uint64_t)test3);
+    root_thread->prev_thread = root_thread;
+    root_thread->next_thread = root_thread;
+    Scheduler::CreateThread("TEST2", test2);
+    Scheduler::CreateThread("TEST3", test3);
 
-    create_thread("IDK", (uint64_t)test4);
-    create_thread("IDK2", (uint64_t)test5, true);
+    Scheduler::CreateThread("IDK", test4);
+    Scheduler::CreateThread("IDK2", test5, true);
     //remove_and_destroy_thread(2);
-    Kernel::RegisterInterruptHandler(TIMER_INTERRUPT, TEST_sched_tick, 0);
+    Kernel::RegisterInterruptHandler(TIMER_INTERRUPT, sched_tick, 0);
     //log.info("Scheduler has been started.\n");
 }
+
+void idle() {
+    for(;;) asm volatile ("hlt");
+}
+
+void Scheduler::Init() {
+    thread_t *root = new thread_t;
+    root->name = "Idle";
+    root->pid = allocate_pid();
+    root->initial_stack = (uint64_t)new char[STACK_SIZE];
+    Arch::Scheduler::SetupSchedState(&root->cpu_state, false, (uint64_t)idle, root->initial_stack);
+    root_thread = root;
+    current_thread = root;
+    root_thread->prev_thread = root_thread;
+    root_thread->next_thread = root_thread;
+    root_thread->pgm = krnl_page;
+    sched_run++;
+    Kernel::RegisterInterruptHandler(TIMER_INTERRUPT, sched_tick, 0);
+}
+
+void Scheduler::Start() {
+    sched_run--;
+}
+
 extern size_t global_ticks;
 static bool just_started = true;
-void TEST_sched_tick(cpu_ctx *regs, void *_) {
+void sched_tick(cpu_ctx *regs, void *_) {
+    if (sched_run >= 1) return;
     //log.info("Current thread: %s\n", current_thread->name);
     //log.info("%s(%d) [ %s(%d) ] %s(%d)\n", current_thread->prev_thread->name, current_thread->prev_thread->pid, current_thread->name, current_thread->pid, current_thread->next_thread->name, current_thread->next_thread->pid);
     if (just_started) {
@@ -157,6 +183,16 @@ void TEST_sched_tick(cpu_ctx *regs, void *_) {
         }
     }
     Arch::Scheduler::LoadState(regs, &current_thread->cpu_state);
+    //if (regs->rip < VMM_HIGHER_HALF) printf("rip: 0x%lx\n", regs->rip);
     current_thread->state = STATE_RUNNING;
     global_ticks++;
+    vmm_switch_to(current_thread->pgm);
+}
+
+void Scheduler::Stop() {
+    sched_run++;
+}
+
+thread_t *Scheduler::GetCurrentThread() {
+    return current_thread;
 }

@@ -7,6 +7,8 @@
 #include <io/text.hpp>
 #include <libc.h>
 #include <logging.hpp>
+#include <krnl.hpp>
+#include <sched/sched.hpp>
 
 static Logger log("Kernel starter");
 
@@ -167,11 +169,9 @@ void unpack_initrd();
 extern size_t regsitered_loggers;
 #include <vfs.hpp>
 void kmain(void) {
-    Arch::Init();
-    pmm_init();
     //print("arch stuff has been initialized, btw this is a early kernel print\n");
     //print("x64OS v2 IS REAL!\n");
-    printf("printf testing, %d\n", 123);
+    //printf("printf testing, %d\n", 123);
     // Ensure the bootloader actually understands our base revision (see spec).
     if (LIMINE_BASE_REVISION_SUPPORTED == false) {
         print("limine doesn't support this base revision, bruh\n");
@@ -187,7 +187,9 @@ void kmain(void) {
 
     // Fetch the first framebuffer.
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
+    Arch::Init();
     setup_flanterm(framebuffer);
+    pmm_init();
     callConstructors();
     Arch::InitStage2();
     pre_sched_uacpi_init();
@@ -217,26 +219,9 @@ void kmain(void) {
     log.info("fun fact: обычный flanterm не может отображать UTF-8 текст, я модифицировал его и добавил туда ssfn, для отображения такого текста\n");
     log.info("Текущие параметры экрана: %dx%dx%d\n", framebuffer->width, framebuffer->height, framebuffer->bpp);
     log.info("fun fact 2: В ядре иниицализировано %lu логгеров\n", regsitered_loggers);
-    VFS::Init();
-    VFS::Mount(vfs_root, NULL, "/", "tmpfs");
-    VFS::Create(vfs_root, "/dev", 0755 | S_IFDIR);
-    unpack_initrd();
-    log.info("Trying to read file from VFS...\n");
-    vfs_node_t *node = VFS::GetNode(vfs_root, "/hi.txt", true);
-    if (node == false) {
-        log.error("Failed to get file, is it unpacked?\n");
-    } else {
-        log.info("Successfully opened file /hi.txt!\n");
-        log.info("File contents: ");
-        char buf[16384];
-        memset(buf, 0, 200);
-        node->resource->read(node->resource, NULL, buf, 0, 180);
-        printf(buf);
-        printf("\n");
-        log.info("File has been read successfully\n");
-    }
-    //TEST_init_sched();
-    //for (int i=0;i<10;i++) TEST_sched_tick();
+    Scheduler::Init();
+    Scheduler::CreateThread("Kernel::Main", Kernel::Main);
+    Scheduler::Start();
     hcf();
 }
 
