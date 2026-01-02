@@ -438,6 +438,7 @@ static void flanterm_fb_swap_palette(struct flanterm_context *_ctx) {
 }
 #define SSFN_CONSOLEBITMAP_TRUECOLOR
 #include "ssfn.h"
+
 static void plot_char_scaled_canvas(struct flanterm_context *_ctx, struct flanterm_fb_char *c, size_t x, size_t y) {
     struct flanterm_fb_context *ctx = (void *)_ctx;
 
@@ -513,7 +514,7 @@ static void plot_char_unscaled_canvas(struct flanterm_context *_ctx, struct flan
 
     x = ctx->offset_x + x * ctx->glyph_width;
     y = ctx->offset_y + y * ctx->glyph_height;
-    if (c->c > 0xff) {
+    if (c->c > 0) {
         //c->c = 'A';
         ssfn_dst.x = x;
         ssfn_dst.y = y;
@@ -829,7 +830,7 @@ static void flanterm_fb_double_buffer_flush(struct flanterm_context *_ctx) {
     if (_ctx->cursor_enabled) {
         draw_cursor(_ctx);
     }
-
+    asm volatile("cli");
     for (size_t i = 0; i < ctx->queue_i; i++) {
         struct flanterm_fb_queue_item *q = &ctx->queue[i];
         size_t offset = q->y * _ctx->cols + q->x;
@@ -851,6 +852,7 @@ static void flanterm_fb_double_buffer_flush(struct flanterm_context *_ctx) {
     ctx->old_cursor_y = ctx->cursor_y;
 
     ctx->queue_i = 0;
+    asm volatile ("sti");
 }
 
 static void flanterm_fb_raw_putchar(struct flanterm_context *_ctx, uint32_t c) {

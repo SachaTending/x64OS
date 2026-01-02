@@ -4,6 +4,7 @@
 #include <sys/time.h>
 #include <fs/resource.h>
 #include <vfs.hpp>
+#include <krnl.hpp>
 
 static Logger log("Initrd unpacker");
 
@@ -48,10 +49,11 @@ static inline uint64_t oct2int(const char *str, size_t len) {
 extern "C" void pmm_free(void *addr, size_t pages);
 static void unpack_addr(void *file_addr) {
     struct tar *current_file = (struct tar *)file_addr;
+    size_t tar_size = 0;
     char *name_override = NULL;
     while (strncmp(current_file->magic, "ustar", 5) == 0) {
         char *name = current_file->name;
-        char *link_name = current_file->link_name;
+        // char *link_name = current_file->link_name; UNUSED
         if (name_override != NULL) {
             name = name_override;
             name_override = NULL;
@@ -63,7 +65,7 @@ static void unpack_addr(void *file_addr) {
 
         uint64_t mode = oct2int(current_file->mode, sizeof(current_file->mode));
         uint64_t size = oct2int(current_file->size, sizeof(current_file->size));
-        uint64_t mtime = oct2int(current_file->mtime, sizeof(current_file->mtime));
+        // uint64_t mtime = oct2int(current_file->mtime, sizeof(current_file->mtime)); UNUSED
         // uint64_t uid = oct2int(current_file->uid, sizeof(current_file->uid));
         // uint64_t gid = oct2int(current_file->gid, sizeof(current_file->gid));
 
@@ -72,12 +74,13 @@ static void unpack_addr(void *file_addr) {
             case TAR_FILE_TYPE_NORMAL: {
                 node = VFS::Create(vfs_root, name, mode | S_IFREG);
                 if (node == NULL) {
+                    PANIC("Failed to unpack file %s", name);
                     //panic(NULL, true, "Failed to allocate an initramfs node");
                 }
 
                 struct resource *resource = node->resource;
                 //ASSERT(resource->write(resource, NULL, (void *)current_file + 512, 0, size) == (ssize_t)size);
-                resource->write(resource, NULL, (void *)current_file + 512, 0, size);
+                resource->write(resource, NULL, (void *)((uint64_t)current_file + 512), 0, size);
                 break;
             }
             case TAR_FILE_TYPE_SYMLINK: {
@@ -90,6 +93,7 @@ static void unpack_addr(void *file_addr) {
             case TAR_FILE_TYPE_DIRECTORY: {
                 node = VFS::Create(vfs_root, name, mode | S_IFDIR);
                 if (node == NULL) {
+                    PANIC("Failed to create directory %s\n", name);
                     //panic(NULL, true, "Failed to allocate an initramfs node");
                 }
                 break;
@@ -104,14 +108,16 @@ static void unpack_addr(void *file_addr) {
             //node->resource->stat.st_mtim = (struct timespec){.tv_sec = mtime, .tv_nsec = 0};
         }
 
-        pmm_free((void *)current_file - VMM_HIGHER_HALF, (512 + ALIGN_UP(size, 512)) / PAGE_SIZE);
+        //pmm_free((void *)current_file - VMM_HIGHER_HALF, (512 + ALIGN_UP(size, 512)) / PAGE_SIZE);
+        tar_size += size;
 
         current_file = (tar *)(void *)((uint64_t)current_file + 512 + ALIGN_UP(size, 512));
     }
+    pmm_free((void *)((uint64_t)file_addr - VMM_HIGHER_HALF), tar_size/ PAGE_SIZE);
 }
 
 void unpack_initrd() {
-    for (int i=0;i<module_request.response->module_count;i++) {
+    for (uint64_t i=0;i<module_request.response->module_count;i++) {
         log.info("Module %d: %s\n", i, module_request.response->modules[i]->path);
         unpack_addr(module_request.response->modules[i]->address);
     }

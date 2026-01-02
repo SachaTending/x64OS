@@ -101,3 +101,138 @@ void *Resource::Create(size_t size) {
     res->truncate = stub_truncate;
     return res;
 }
+
+
+struct f_descriptor *fd_create_from_resource(struct resource *res, int flags) {
+    struct f_description *description = new struct f_description;
+    struct f_descriptor *fd;
+    if (description == NULL) {
+        goto fail;
+    }
+
+    description->refcount = 1;
+    description->flags = flags & FILE_STATUS_FLAGS_MASK;
+    description->lock = (spinlock_t)SPINLOCK_INIT;
+    description->res = res;
+
+    fd = new struct f_descriptor;
+    if (fd == NULL) {
+        goto fail;
+    }
+    res->ref(res, description);
+    fd->description = description;
+    fd->flags = flags & FILE_DESCRIPTOR_FLAGS_MASK;
+    return fd;
+
+fail:
+    if (description != NULL) {
+        free(description);
+    }
+    return NULL;
+}
+#include <sched/sched.hpp>
+bool fdnum_close(Scheduler::thread_t *proc, int fdnum, bool lock) {
+    struct f_descriptor *fd;
+    if (proc == NULL) {
+        proc = Scheduler::GetCurrentThread();
+    }
+
+    bool ok = false;
+
+    if (lock) {
+        spinlock_acquire(&proc->fds_lock);
+    }
+
+    if (fdnum < 0 || fdnum >= MAX_FDS) {
+        //errno = EBADF;
+        goto cleanup;
+    }
+
+    fd = (struct f_descriptor *)proc->fds[fdnum];
+    if (fd == NULL) {
+        //errno = EBADF;
+        goto cleanup;
+    }
+
+    fd->description->res->unref(fd->description->res, fd->description);
+
+    if (fd->description->refcount-- == 1) {
+        free(fd->description);
+    }
+
+    free(fd);
+
+    ok = true;
+    proc->fds[fdnum] = NULL;
+
+cleanup:
+    if (lock) {
+        spinlock_release(&proc->fds_lock);
+    }
+    return ok;
+}
+
+int fdnum_create_from_fd(struct thread *_proc, struct f_descriptor *fd, int old_fdnum, bool specific) {
+    Scheduler::thread_t *proc = (Scheduler::thread_t *)_proc;
+    if (proc == NULL) {
+        proc = Scheduler::GetCurrentThread();
+    }
+
+    int res = -1;
+    spinlock_acquire(&proc->fds_lock);
+
+    if (old_fdnum < 0 || old_fdnum >= MAX_FDS) {
+        //errno = EBADF;
+        goto cleanup;
+    }
+
+    if (!specific) {
+        for (int i = old_fdnum; i < MAX_FDS; i++) {
+            if (proc->fds[i] == NULL) {
+                proc->fds[i] = (Scheduler::f_descriptor*)fd;
+                res = i;
+                goto cleanup;
+            }
+        }
+    } else {
+        fdnum_close(proc, old_fdnum, false);
+        proc->fds[old_fdnum] = (Scheduler::f_descriptor*)fd;
+        res = old_fdnum;
+    }
+
+cleanup:
+    spinlock_release(&proc->fds_lock);
+    return res;
+}
+
+struct f_descriptor *fd_from_fdnum(Scheduler::thread_t *proc, int fdnum);
+
+ssize_t syscall_read(int fdnum, void *buf, size_t count) {
+
+    //DEBUG_SYSCALL_ENTER("read(%d, %lx, %lu)", fdnum, buf, count);
+
+    ssize_t ret = -1;
+
+    Scheduler::thread_t *proc = Scheduler::GetCurrentThread();
+    struct f_description *description;
+    struct resource *res;
+    struct f_descriptor *fd = fd_from_fdnum(proc, fdnum);
+    if (fd == NULL) {
+        goto cleanup;
+    }
+    
+    description = (f_description *) fd->description;
+    res = description->res;
+
+    ret = res->read(res, description, buf, description->offset, count);
+    if (ret < 0) {
+        ret = -1;
+        goto cleanup;
+    }
+
+    description->offset += ret;
+
+cleanup:
+    //DEBUG_SYSCALL_LEAVE("%lld", ret);
+    return ret;
+}

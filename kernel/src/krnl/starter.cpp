@@ -27,37 +27,43 @@ static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_framebuffer_request framebuffer_request = {
     .id = LIMINE_FRAMEBUFFER_REQUEST,
-    .revision = 0
+    .revision = 0,
+    .response = 0
 };
 
 __attribute__((used, section(".limine_requests")))
 volatile struct limine_hhdm_request hhdm_request = {
     .id = LIMINE_HHDM_REQUEST,
-    .revision = 0
+    .revision = 0,
+    .response = 0
 };
 
 __attribute__((used, section(".limine_requests")))
 volatile struct limine_memmap_request memmap_request = {
     .id = LIMINE_MEMMAP_REQUEST,
-    .revision = 0
+    .revision = 0,
+    .response = 0
 };
 
 __attribute__((used, section(".limine_requests")))
 volatile struct limine_executable_address_request kernel_addr_request = {
     .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST,
-    .revision = 0
+    .revision = 0,
+    .response = 0
 };
 
 __attribute__((used, section(".limine_requests")))
 volatile struct limine_rsdp_request rsdp_request = {
     .id = LIMINE_RSDP_REQUEST,
-    .revision = 0
+    .revision = 0,
+    .response = 0
 };
 
 __attribute__((used, section(".limine_requests")))
 volatile struct limine_mp_request smp_request = {
     .id = LIMINE_MP_REQUEST,
-    .revision = 0
+    .revision = 0,
+    .response = 0
 };
 
 __attribute__((used, section(".limine_requests")))
@@ -166,8 +172,13 @@ bool try_to_init_hpet();
 void TEST_init_sched();
 void TEST_sched_tick();
 void unpack_initrd();
+
+#include <uacpi/tables.h>
+#include <uacpi/uacpi.h>
+
 extern size_t regsitered_loggers;
 #include <vfs.hpp>
+
 void kmain(void) {
     //print("arch stuff has been initialized, btw this is a early kernel print\n");
     //print("x64OS v2 IS REAL!\n");
@@ -220,7 +231,7 @@ void kmain(void) {
     log.info("Текущие параметры экрана: %dx%dx%d\n", framebuffer->width, framebuffer->height, framebuffer->bpp);
     log.info("fun fact 2: В ядре иниицализировано %lu логгеров\n", regsitered_loggers);
     Scheduler::Init();
-    Scheduler::CreateThread("Kernel::Main", Kernel::Main);
+    Scheduler::CreateThread("Kernel::Main", Kernel::Main, false, krnl_page);
     Scheduler::Start();
     hcf();
 }

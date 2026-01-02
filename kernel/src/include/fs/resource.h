@@ -3,10 +3,12 @@
 #include <stddef.h>
 #include <spinlock.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sched/sched.hpp>
+#include <fcntl.h>
 
 struct process;
 struct f_description;
-typedef size_t ssize_t;
 
 struct resource {
     int res_size;
@@ -47,3 +49,10 @@ namespace Resource
 {
     void *Create(size_t size);
 } // namespace Resource
+
+
+#define FILE_CREATION_FLAGS_MASK (O_CREAT | O_DIRECTORY | O_EXCL | O_NOCTTY | O_NOFOLLOW | O_TRUNC)
+#define FILE_DESCRIPTOR_FLAGS_MASK (O_CLOEXEC)
+#define FILE_STATUS_FLAGS_MASK (~(FILE_CREATION_FLAGS_MASK | FILE_DESCRIPTOR_FLAGS_MASK))
+struct f_descriptor *fd_create_from_resource(struct resource *res, int flags);
+int fdnum_create_from_fd(struct thread *proc, struct f_descriptor *fd, int old_fdnum, bool specific);

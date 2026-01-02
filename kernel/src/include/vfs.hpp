@@ -156,5 +156,3 @@ namespace VFS
     struct vfs_node *Create(struct vfs_node *parent, const char *name, int mode);
     struct vfs_node *GetNode(struct vfs_node *parent, const char *path, bool follow_links);
 } // namespace VFS
-
-#define AT_FDCWD -100

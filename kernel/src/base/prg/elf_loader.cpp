@@ -37,6 +37,9 @@ bool elf_load(struct pagemap *pagemap, struct resource *res, uint64_t load_base,
         }
 
         switch (phdr.p_type) {
+            case PT_TLS:
+                log.info("PT_TLS 0x%lx, size: %lu, offs: 0x%lx\n", phdr.p_vaddr, phdr.p_memsz, phdr.p_offset);
+                break;
             case PT_LOAD: {
                 int prot = PROT_READ;
                 if (phdr.p_flags & PF_W) {
@@ -45,6 +48,7 @@ bool elf_load(struct pagemap *pagemap, struct resource *res, uint64_t load_base,
                 if (phdr.p_flags & PF_X) {
                     prot |= PROT_EXEC;
                 }
+                //log.info("PT_LOAD 0x%lx, size: %lu\n", phdr.p_vaddr, phdr.p_memsz);
 
                 size_t misalign = phdr.p_vaddr & (PAGE_SIZE - 1);
                 size_t page_count = DIV_ROUNDUP(phdr.p_memsz + misalign, PAGE_SIZE);

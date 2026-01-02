@@ -35,15 +35,18 @@ namespace Scheduler
         struct thread *next_thread;
         struct thread *prev_thread;
         uint64_t initial_stack;
-        pagemap *pgm;
+        struct pagemap *pgm;
         uint64_t mmap_anon_base;
         syscall_set syscall;
-        vfs_node_t *cwd;
+        struct vfs_node *cwd;
         spinlock_t fds_lock;
         struct f_descriptor *fds[MAX_FDS];
+        struct {
+            uint64_t set_tid_addr;
+        } linux_specific;
     } thread_t;
     void Init();
-    void CreateThread(const char *name, void (*entry)(), bool usermode=false, pagemap *pgm=krnl_page);
+    void CreateThread(const char *name, void (*entry)(), bool usermode, struct pagemap *pgm, const char **argv=0, const char **envp=0, auxval *aux=0);
     void Start();
     void Stop();
     thread_t *GetCurrentThread();

@@ -59,7 +59,7 @@ static inline void irqrestore(unsigned long flags)
 #define post_log()  post_log2()
 void Logger::info(const char *msg, ...) {
     pre_log();
-    printf("\e[97m[INFO][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
+    printf("\e[97m[INFO][%lu][%lu][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf(msg, lst);
@@ -69,7 +69,7 @@ void Logger::info(const char *msg, ...) {
 
 void Logger::error(const char *msg, ...) {
     pre_log();
-    printf("\e[31m[ERROR][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
+    printf("\e[31m[ERROR][%lu][%lu][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf(msg, lst);
@@ -83,7 +83,7 @@ void Logger::debug(const char *msg, ...) {
     pre_log();
     bool old_print_debug = print_debug;
     print_debug = 1;
-    printf("\e[34m[DEBUG][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
+    printf("\e[34m[DEBUG][%lu][%lu][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf(msg, lst);
@@ -95,7 +95,7 @@ void Logger::debug(const char *msg, ...) {
 
 void Logger::warn(const char *msg, ...) {
     pre_log();
-    printf("\e[33m\e[1m[WARNING][%lu][%u][%s]: ", get_used_ram(), TICK, this->name);
+    printf("\e[33m\e[1m[WARNING][%lu][%lu][%s]: ", get_used_ram(), TICK, this->name);
     va_list lst;
     va_start(lst, msg);
     vprintf(msg, lst);

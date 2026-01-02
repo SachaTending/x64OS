@@ -36,6 +36,7 @@ uint64_t *vmm_virt2pte(struct pagemap *pagemap, uintptr_t virt, bool allocate);
 
 uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate);
 void vmm_map_range(pagemap *pgm, uint64_t start, size_t count, uint64_t flags);
+void vmm_map_range_no_krnl_map(pagemap *pgm, uint64_t start, size_t count, uint64_t flags);
 struct pagemap *vmm_new_pagemap(void);
 #ifdef __cplusplus
 }

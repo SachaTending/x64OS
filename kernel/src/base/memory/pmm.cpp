@@ -49,7 +49,7 @@ static uint8_t *bitmap = NULL;
 static uint64_t highest_page_index = 0;
 static uint64_t last_used_index = 0;
 static uint64_t usable_pages = 0;
-extern uint64_t used_pages = 0;
+uint64_t used_pages = 0;
 static uint64_t reserved_pages = 0;
 
 extern size_t used_ram;
@@ -68,6 +68,8 @@ static inline void bitmap_reset(void *bitmap, size_t bit) {
     uint8_t *bitmap_u8 = (uint8_t *)bitmap;
     bitmap_u8[bit / 8] &= ~(1 << (bit % 8));
 }
+
+static size_t bitmap_size;
 
 void *pmm_alloc_nozero(size_t pages);
 void slab_init();
@@ -104,7 +106,7 @@ void pmm_init(void) {
 
     // Calculate the needed size for the bitmap in bytes and align it to page size.
     highest_page_index = highest_addr / PAGE_SIZE;
-    uint64_t bitmap_size = ALIGN_UP(highest_page_index / 8, PAGE_SIZE);
+    bitmap_size = ALIGN_UP(highest_page_index / 8, PAGE_SIZE);
 
     log.debug("pmm: Highest address: %lx\n", highest_addr);
     log.debug("pmm: Bitmap size: %lu bytes\n", bitmap_size);
@@ -120,7 +122,6 @@ void pmm_init(void) {
 
         if (entry->length >= bitmap_size) {
             bitmap = (uint8_t *)(((uint64_t)entry->base) + hhdm->offset);
-
             // Initialise entire bitmap to 1 (non-free)
             memset(bitmap, 0xff, bitmap_size);
 
@@ -133,7 +134,7 @@ void pmm_init(void) {
     if (bitmap == NULL) {
         log.error("Failed to find region for bitmap, how tf is this even possible?\n");
     } else {
-        log.debug("Using bitmap at 0x%lx", bitmap - VMM_HIGHER_HALF);
+        log.debug("Using bitmap at 0x%lx\n", bitmap - VMM_HIGHER_HALF);
     }
 
     // Populate free bitmap entries according to the memory map.
@@ -184,6 +185,7 @@ void pmm_on_vmm_enabled() {
     struct limine_hhdm_response *hhdm = hhdm_request.response;
     struct limine_memmap_entry **entries = memmap->entries;
     log.info("krnl_page: 0x%lx\n", krnl_page);
+    vmm_map_range(krnl_page, (uint64_t)bitmap-hhdm->offset, bitmap_size, PTE_WRITABLE | PTE_PRESENT);
     vmm_map_page(krnl_page, 0, 0, PTE_PRESENT); // map 0 page
     for (size_t i = 0; i < memmap->entry_count; i++) {
         struct limine_memmap_entry *entry = entries[i];
@@ -215,7 +217,7 @@ static void *inner_alloc(size_t pages, uint64_t limit) {
 extern "C" void *pmm_alloc(size_t pages) {
     void *ret = pmm_alloc_nozero(pages);
     if (ret != NULL) {
-        memset(ret + VMM_HIGHER_HALF, 0, pages * PAGE_SIZE);
+        memset((void *)((uint64_t)ret + VMM_HIGHER_HALF), 0, pages * PAGE_SIZE);
     }
 
     return ret;
@@ -240,7 +242,7 @@ void *pmm_alloc_nozero(size_t pages) {
     used_pages += pages;
 
     spinlock_release(&lock);
-    memset(ret+VMM_HIGHER_HALF, 0, sizeof(pages));
+    memset((void *)((uint64_t)ret+VMM_HIGHER_HALF), 0, sizeof(pages));
     return ret;
 }
 
@@ -287,7 +289,7 @@ static inline struct slab *slab_for(size_t size) {
 static void create_slab(struct slab *slab, size_t ent_size) {
     //slab->lock = (spinlock_t)SPINLOCK_INIT;
     log.debug("slab: creating slab with size %lu\n", ent_size);
-    slab->first_free = (void **)(pmm_alloc_nozero(1) + VMM_HIGHER_HALF);
+    slab->first_free = (void **)((uint64_t)pmm_alloc_nozero(1) + VMM_HIGHER_HALF);
     slab->ent_size = ent_size;
 
     size_t header_offset = ALIGN_UP(sizeof(struct slab_header), ent_size);
@@ -295,7 +297,7 @@ static void create_slab(struct slab *slab, size_t ent_size) {
 
     struct slab_header *slab_ptr = (struct slab_header *)slab->first_free;
     slab_ptr->slab = slab;
-    slab->first_free = (void **)((void *)slab->first_free + header_offset);
+    slab->first_free = (void **)((uint64_t)slab->first_free + header_offset);
 
     void **arr = (void **)slab->first_free;
     size_t max = available_size / ent_size - 1;
@@ -362,10 +364,11 @@ void *slab_alloc(size_t size) {
     size_t page_count = DIV_ROUNDUP(size, PAGE_SIZE);
     void *ret = pmm_alloc(page_count + 1);
     if (ret == NULL) {
+        log.warn("SLAB: Failed to alloc %lu bytes\n", size);
         return NULL;
     }
 
-    ret += VMM_HIGHER_HALF;
+    ret = (void *)((uint64_t)ret + VMM_HIGHER_HALF);
     struct alloc_metadata *metadata = (struct alloc_metadata *)ret;
 
     metadata->pages = page_count;
@@ -373,7 +376,7 @@ void *slab_alloc(size_t size) {
 
     used_ram += size;
 
-    return ret + PAGE_SIZE;
+    return (void *)((uint64_t)ret + PAGE_SIZE);
 }
 
 void *slab_realloc(void *addr, size_t new_size) {
@@ -382,7 +385,7 @@ void *slab_realloc(void *addr, size_t new_size) {
     }
 
     if (((uintptr_t)addr & 0xfff) == 0) {
-        struct alloc_metadata *metadata = (struct alloc_metadata *)(addr - PAGE_SIZE);
+        struct alloc_metadata *metadata = (struct alloc_metadata *)((uint64_t)addr - PAGE_SIZE);
         if (DIV_ROUNDUP(metadata->size, PAGE_SIZE) == DIV_ROUNDUP(new_size, PAGE_SIZE)) {
             metadata->size = new_size;
             return addr;
@@ -426,9 +429,9 @@ void slab_free(void *addr) {
     }
 
     if (((uintptr_t)addr & 0xfff) == 0) {
-        struct alloc_metadata *metadata = (struct alloc_metadata *)(addr - PAGE_SIZE);
+        struct alloc_metadata *metadata = (struct alloc_metadata *)((uint64_t)addr - PAGE_SIZE);
         used_ram -= metadata->size;
-        pmm_free((void *)metadata - VMM_HIGHER_HALF, metadata->pages + 1);
+        pmm_free((void *)((uint64_t)metadata - VMM_HIGHER_HALF), metadata->pages + 1);
         return;
     }
 
@@ -439,6 +442,7 @@ void slab_free(void *addr) {
 extern "C" {
     void *malloc(size_t size) {
         void *out = slab_alloc(size);
+        memset(out, 0, size);
         return out;
     }
     void free(void *ptr) {

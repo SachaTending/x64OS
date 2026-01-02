@@ -16,6 +16,9 @@
 //#include <time/time.k.h>
 #include <spinlock.h>
 #include <time.hpp>
+#include <logging.hpp>
+
+static Logger log("tmpfs");
 
 struct tmpfs_resource : resource {
     void *data;
@@ -52,6 +55,8 @@ static ssize_t tmpfs_resource_write(struct resource *_this, struct f_description
 
     ssize_t ret = -1;
     struct tmpfs_resource *this2 = (struct tmpfs_resource *)_this;
+    log.debug("tmpfs_resource_write(0x%lx, 0x%lx, 0x%lx, %lu, %lu);\n", _this, description, buf, offset, count);
+    //rintf("buf: 0x%x off: 0x%lx count: %lu\n", buf, offset, count);
 
     spinlock_acquire(&this2->lock);
 
@@ -75,7 +80,8 @@ static ssize_t tmpfs_resource_write(struct resource *_this, struct f_description
 
     if ((off_t)(offset + count) >= this2->stat.st_size) {
         this2->stat.st_size = (off_t)(offset + count);
-        this2->stat.st_blocks = DIV_ROUNDUP(this2->stat.st_size, this2->stat.st_blksize);
+        //printf("st_size: %lu st_blksize: %lu\n", this2->stat.st_size, this2->stat.st_blksize);
+        //this2->stat.st_blocks = DIV_ROUNDUP(this2->stat.st_size, this2->stat.st_blksize);
     }
 
     ret = count;
@@ -176,7 +182,8 @@ static inline struct tmpfs_resource *create_tmpfs_resource(struct tmpfs *this2, 
 
     resource->stat.st_size = 0;
     resource->stat.st_blocks = 0;
-    resource->stat.st_blksize = 512;
+    //resource->stat.st_blksize = 512;
+    resource->stat.st_blksize = 4096;
     resource->stat.st_dev = this2->dev_id;
     resource->stat.st_ino = this2->inode_counter++;
     resource->stat.st_mode = mode;
@@ -204,6 +211,7 @@ static struct vfs_node *tmpfs_create(struct vfs_filesystem *_this, struct vfs_no
     struct tmpfs *this2 = (struct tmpfs *)_this;
     struct vfs_node *new_node = NULL;
     struct tmpfs_resource *resource = NULL;
+    log.debug("tmpfs_create(0x%lx, 0x%lx, \'%s\", %d);\n", _this, parent, name, mode);
 
     new_node = VFS::CreateNode(_this, parent, name, S_ISDIR(mode));
     if (new_node == NULL) {
@@ -277,6 +285,7 @@ static struct vfs_node *tmpfs_link(struct vfs_filesystem *_this, struct vfs_node
 }
 
 static inline struct vfs_filesystem *tmpfs_instantiate(void) {
+    log.debug("tmpfs_instantiate();\n");
     struct tmpfs *new_fs = new struct tmpfs;
     if (new_fs == NULL) {
         return NULL;
@@ -290,5 +299,6 @@ static inline struct vfs_filesystem *tmpfs_instantiate(void) {
 }
 
 void tmpfs_init(void) {
+    log.debug("tmpfs_init();\n");
     VFS::AddFilesystem(tmpfs_mount, "tmpfs");
 }

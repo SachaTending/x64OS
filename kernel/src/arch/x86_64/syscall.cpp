@@ -1,6 +1,8 @@
 #include <arch/interrupts.h>
 #include <krnl.hpp>
 #include <libc.h>
+#include <arch/vmm.h>
+#include <sched/sched.hpp>
 extern "C" int syscall_c_entry(cpu_ctx *ctx) {
     //printf("GOT SYSCALL\n");
     //printf("RIP: 0x%lx\n", ctx->rip);
@@ -9,7 +11,12 @@ extern "C" int syscall_c_entry(cpu_ctx *ctx) {
     //} else {
     //    printf("wtf is syscall %d(0x%lx)\n", ctx->rax, ctx->rax);
     //}
-    Kernel::HandleSyscall(ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx);
+    //asm volatile ("cli");
+    //printf("SYSCALL(%d)\n", ctx->rax);
+    ctx->rax = Kernel::HandleSyscall(ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx, ctx->r8, ctx->r9, ctx->r10, ctx);
+    //printf("SYSCALL END, RET=0x%lx\n", ctx->rax);
+    vmm_switch_to((pagemap *)Scheduler::GetCurrentThread()->pgm);
+    asm volatile ("sti");
     return 0;
 }
 extern "C" void syscall_entry();

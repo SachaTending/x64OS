@@ -27,7 +27,7 @@ static void pit_set_frequency(uint64_t frequency) {
 extern uint64_t smp_bsp_lapic;
 void io_apic_set_irq_redirect(uint32_t lapic_id, uint8_t vector, uint8_t irq, bool status);
 void Arch::x86::InitPIC() {
-    pit_set_frequency(1000); // Set frequency to 1000 kHz
+    pit_set_frequency(1000); // Set frequency to 1 kHz
     io_apic_set_irq_redirect(smp_bsp_lapic, 32, 0, true);
-    io_apic_set_irq_redirect(smp_bsp_lapic, 32, 0, true);
+    ///io_apic_set_irq_redirect(smp_bsp_lapic, 32, 0, true);
 }

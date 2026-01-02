@@ -1,4 +1,5 @@
 .extern syscall_c_entry
+
 .macro THUNK
     swapgs
 
@@ -77,7 +78,7 @@ syscall_entry:
 	pushq $0
 	pushq %rcx // RIP
 	pushq $0
-	pushq $1024
+	pushq $1024 // interrupt number
 
     THUNK
 

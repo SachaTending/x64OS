@@ -2,7 +2,7 @@
 #include <logging.hpp>
 
 static Logger log("VMM");
-
+bool p = false;
 extern "C" {
     void *pmm_alloc(size_t pages);
     uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate);
@@ -15,6 +15,7 @@ extern "C" {
 
         pagemap->lock = (spinlock_t)SPINLOCK_INIT;
         pagemap->top_level = (uint64_t *)pmm_alloc(1);
+        pagemap->mmap_ranges.clear();
         if (pagemap->top_level == NULL) {
             //errno = ENOMEM;
             goto cleanup;
@@ -22,10 +23,12 @@ extern "C" {
 
         pagemap->top_level = (uint64_t *)((void *)pagemap->top_level + VMM_HIGHER_HALF);
         if (krnl_page != 0) {
-            for (size_t i = 0; i < 512; i++) {
+            for (size_t i = 256; i < 512; i++) {
                 pagemap->top_level[i] = krnl_page->top_level[i];
             }
         }
+        vmm_map_page(pagemap, 0x00000000037fc024, 0x00000000037fc024, PTE_PRESENT | PTE_WRITABLE);
+        vmm_map_page(pagemap, 0x00000000037fd024, 0x00000000037fd024, PTE_WRITABLE | PTE_PRESENT);
         return pagemap;
 
     cleanup:
@@ -71,10 +74,11 @@ extern "C" {
         }
         //debug("got pml1, ", 1);
 
-        //if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
-        //    //log.error("Entry for addr 0x%lx already present.\n", virt);
-        //    goto cleanup;
-        //}
+        if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
+            //if (p) log.error("Entry for addr 0x%lx already present.\n", virt);
+            log.debug("Entry for addr 0x%lx already present.\n", virt);
+            goto cleanup;
+        }
 
         ok = true;
         //printf("map: ok, ");
@@ -146,10 +150,22 @@ extern "C" {
         uint64_t end = ALIGN_UP(start+count, 4096);
         size_t pages = (end/4096)-(start/4096);
         pages += 1;
-        //printf("start: 0x%lx, end: 0x%lx, pages to map: %lu\n", start2, end, pages);
+        printf("start: 0x%lx, end: 0x%lx, pages to map: %lu\n", start2, end, pages);
         for (size_t i=0;i<pages;i++) {
             vmm_map_page(pgm, start2+(i*4096), start2+(i*4096), flags);
             vmm_map_page(pgm, (start2+(i*4096))+VMM_HIGHER_HALF, start2+(i*4096), flags);
+            //printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), start2+(i*4096));
+        }
+    }
+
+    void vmm_map_range_no_krnl_map(pagemap *pgm, uint64_t start, size_t count, uint64_t flags) {
+        uint64_t start2 = ALIGN_DOWN(start, 4096);
+        uint64_t end = ALIGN_UP(start+count, 4096);
+        size_t pages = (end/4096)-(start/4096);
+        pages += 1;
+        printf("start: 0x%lx, end: 0x%lx, pages to map: %lu\n", start2, end, pages);
+        for (size_t i=0;i<pages;i++) {
+            vmm_map_page(pgm, start2+(i*4096), start2+(i*4096), flags);
             //printf("map: 0x%lx -> 0x%lx\n", start2+(i*4096), start2+(i*4096));
         }
     }

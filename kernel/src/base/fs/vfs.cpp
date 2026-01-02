@@ -14,7 +14,7 @@ static spinlock_t vfs_lock = SPINLOCK_INIT;
 struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *parent,
                                  const char *name, bool dir) {
     struct vfs_node *node = new vfs_node_t;
-
+    log.debug("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d);\n", fs, parent, name, dir);
     node->name = (char *)strdup(name);
 
     node->parent = parent;
@@ -23,7 +23,7 @@ struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *par
     if (dir) {
         node->children = (typeof(node->children))HASHMAP_INIT(256);
     }
-
+    log.debug("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d); ret=0x%lx\n", fs, parent, name, dir, node);
     return node;
 }
 vfs_node_t *vfs_root;
@@ -51,10 +51,12 @@ void VFS::AddFilesystem(fs_mount_t fs_mount, const char *identifier) {
 }
 void tmpfs_init(void);
 void VFS::Init(void) {
+    log.debug("VFS::Init();\n");
     vfs_root = VFS::CreateNode(NULL, NULL, "", false);
 
     filesystems = (typeof(filesystems))HASHMAP_INIT(256);
     tmpfs_init();
+    log.debug("VFS::Init(); done\n");
 }
 struct path2node_res {
     struct vfs_node *target_parent;
@@ -67,7 +69,8 @@ enum e {
     ENOTDIR,
     EISDIR,
     ENODEV,
-    EEXIST
+    EEXIST,
+    ELOOP
 };
 static struct vfs_node *reduce_node(struct vfs_node *node, bool follow_symlinks);
 static bool populate(struct vfs_node *node) {
@@ -78,6 +81,7 @@ static bool populate(struct vfs_node *node) {
     return true;
 }
 static struct path2node_res path2node(struct vfs_node *parent, const char *path) {
+    if (parent == 0) parent = vfs_root;
     if (path == NULL || strlen(path) == 0) {
         errno = ENOENT;
         return (struct path2node_res){NULL, NULL, NULL};
@@ -299,7 +303,7 @@ struct vfs_node *VFS::Create(struct vfs_node *parent, const char *name, int mode
     }
 
     ret = target_node;
-    log.info("Created node %s on node %s mode %d, is dir: %d\n", name, parent->name, mode, S_ISDIR(mode));
+    //log.info("Created node %s on node %s mode %d, is dir: %d\n", name, parent->name, mode, S_ISDIR(mode));
 
 cleanup:
     if (r.basename != NULL) {
@@ -347,7 +351,7 @@ struct f_descriptor *fd_from_fdnum(Scheduler::thread_t *proc, int fdnum) {
         goto cleanup;
     }
 
-    ret = proc->fds[fdnum];
+    ret = (struct f_descriptor *)proc->fds[fdnum];
     if (ret == NULL) {
         //errno = EBADF;
         goto cleanup;
@@ -419,4 +423,82 @@ bool vfs_fdnum_path_to_node(int dir_fdnum, const char *path, bool empty_path, bo
     }
 
     return true;
+}
+
+
+int syscall_openat(int dir_fdnum, const char *path, int flags, int mode) {
+    //DEBUG_SYSCALL_ENTER("openat(%d, %s, %x, %o)", dir_fdnum, path, flags, mode);
+
+    int ret = -1;
+
+    auto *thread = Scheduler::GetCurrentThread();
+
+    struct vfs_node *parent = NULL;
+    char *basename = NULL;
+
+    int create_flags, follow_links;
+    struct vfs_node *node;
+    struct f_descriptor *fd;
+
+    if (!vfs_fdnum_path_to_node(dir_fdnum, path, false, false, &parent, NULL, &basename)) {
+        goto cleanup;
+    }
+
+    if (parent == NULL) {
+        errno = ENOENT;
+        goto cleanup;
+    }
+
+    create_flags = flags & FILE_CREATION_FLAGS_MASK;
+    follow_links = (flags & O_NOFOLLOW) == 0;
+
+    node = VFS::GetNode(parent, basename, follow_links);
+    if (node == NULL) {
+        if ((create_flags & O_CREAT) != 0) {
+            //node = VFS::Create(parent, basename, (mode & ~proc->umask) | S_IFREG);
+            node = VFS::Create(parent, basename, (mode) | S_IFREG);
+        } else {
+            errno = ENOENT;
+            goto cleanup;
+        }
+    }
+
+    if (node == NULL) {
+        goto cleanup;
+    }
+
+    if (S_ISLNK(node->resource->stat.st_mode)) {
+        errno = ELOOP;
+        goto cleanup;
+    }
+
+    node = reduce_node(node, true);
+    if (node == NULL) {
+        goto cleanup;
+    }
+
+    if (!S_ISDIR(node->resource->stat.st_mode) && (flags & O_DIRECTORY) != 0) {
+        errno = ENOTDIR;
+        goto cleanup;
+    }
+
+    fd = fd_create_from_resource(node->resource, flags);
+    if (fd == NULL) {
+        goto cleanup;
+    }
+
+    if ((flags & O_TRUNC) != 0 && S_ISREG(node->resource->stat.st_mode)) {
+        node->resource->truncate(node->resource, fd->description, 0);
+    }
+
+    fd->description->node = node;
+    ret = fdnum_create_from_fd((struct thread *)thread, fd, 0, false);
+
+cleanup:
+    if (basename != NULL) {
+        free(basename);
+    }
+
+    //DEBUG_SYSCALL_LEAVE("%d", ret);
+    return ret;
 }

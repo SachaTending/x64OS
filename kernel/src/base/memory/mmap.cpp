@@ -5,36 +5,45 @@
 #include <spinlock.h>
 #include <mmap.h>
 #include <logging.hpp>
+#include <krnl.hpp>
 
 static Logger log("mmap");
-
-#define PANIC(...)
+uint64_t base = 0;
 
 void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
            int flags, vfs_node_t *node, size_t offset) {
+    asm volatile("sti");
     Scheduler::Stop();
     struct mmap_range_global *global_range = NULL;
     struct mmap_range_local *local_range = NULL;
 
     length = ALIGN_UP(length, PAGE_SIZE);
 
-    Scheduler::thread_t *task = Scheduler::GetCurretThread();
-
-    uint64_t base = 0;
+    Scheduler::thread_t *task = Scheduler::GetCurrentThread();
+    log.debug("task: 0x%lx\n", task);
+    log.debug("task name: 0x%lx %s\n", task->name, task->name);
+    log.debug("pagemap: 0x%lx\n", pagemap);
+    if (pagemap == 0) pagemap = task->pgm;
+    log.debug("pagemap: 0x%lx 0x%lx\n", pagemap, task->pgm);
+    log.debug("mmap_anon_base: 0x%lx\n", task->mmap_anon_base);
     if ((flags & MAP_FIXED) != 0) {
         // Not supported.
+        //printf("got MAP_FIXED\n");
         PANIC("Tried to mmap with MAP_FIXED, but this is not implemented.\n");
         //if (!munmap(pagemap, addr, length)) {
         //    goto cleanup;
         //}
-        base = addr;
-    } else {
-        base = task->mmap_anon_base;
-        task->mmap_anon_base += length + PAGE_SIZE;
     }
-    global_range = new mmap_range_global;
+        //printf("normal mmap\n");
+        base = task->mmap_anon_base;
+        log.debug("base: 0x%lx\n", base);
+        task->mmap_anon_base += length + PAGE_SIZE;
+    
+    global_range = (mmap_range_global *)malloc(sizeof(mmap_range_global));
+    log.debug("gr 0x%lx\n", global_range);
 
     global_range->shadow_pagemap = vmm_new_pagemap();
+    log.debug("spgm 0x%lx\n", global_range->shadow_pagemap);
 
     global_range->base = base;
     global_range->length = length;
@@ -42,6 +51,7 @@ void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
     global_range->offset = offset;
 
     local_range = new struct mmap_range_local;
+    log.debug("lr 0x%lx\n", local_range);
 
     local_range->pagemap = pagemap;
     local_range->global = global_range;
@@ -52,15 +62,19 @@ void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
     local_range->offset = offset;
 
     global_range->locals.push_back(local_range);
+    //printf("push1\n");
 
     spinlock_acquire(&pagemap->lock);
-
+    log.debug("sp acq\n");
+    log.debug("pgm: 0x%lx\n", pagemap);
     pagemap->mmap_ranges.push_back(local_range);
+    log.debug("push2\n");
 
     spinlock_release(&pagemap->lock);
 
     Scheduler::Start();
-    log.debug("mmap ret=0x%lx\n", base);
+    asm volatile("sti");
+    //log.info("mmap ret=0x%lx\n", base);
     return (void *)base;
 }
 
@@ -117,12 +131,15 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
 bool mmap_pf(cpu_ctx *regs) {
     if ((regs->err & 0x1) != 0) {
     //if (false) {
-        return false;
+        log.debug("mmap_pf: cr2=0x%lx, not our case, gonna handle anyway, err=0x%08x\n", regs->cr2, regs->err);
+        log.debug("cs: 0x%02x\n", regs->cs);
+        //return false;
     }
 
     uint64_t cr2 = regs->cr2;
-
-    pagemap *pgm = Scheduler::GetCurretThread()->pgm;
+    log.debug("mmap_pf\n");
+    pagemap *pgm = Scheduler::GetCurrentThread()->pgm;
+    log.debug("thread: %d %s\n", Scheduler::GetCurrentThread()->pid, Scheduler::GetCurrentThread()->name);
     spinlock_acquire(&pgm->lock);
 
     struct addr2range range = addr2range(pgm, cr2);
@@ -136,10 +153,11 @@ bool mmap_pf(cpu_ctx *regs) {
 
     void *page = NULL;
     if ((local_range->flags & MAP_ANONYMOUS) != 0) {
+        //log.info("gonna allocate page for addr 0x%lx\n", cr2);
         page = pmm_alloc(1);
         //log.debug("new page allocated: 0x%lx for addr 0x%lx\n", page, cr2);
     } else {
-        //struct resource *res = page = local_range->global->res;
+        //struct resource *res = local_range->global->res;
         //page = res->mmap(res, range.file_page, local_range->flags);
         PANIC("mmaping files is (sadly) not supported.");
     }

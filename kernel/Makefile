@@ -69,7 +69,6 @@ override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep -q '^Target
 override CFLAGS += \
     -Wall \
     -Wextra \
-    -std=gnu11 \
     -fno-stack-protector \
     -fno-stack-check \
     -fno-lto \
@@ -88,7 +87,7 @@ override CPPFLAGS := \
     -DLIMINE_API_REVISION=3 \
     -MMD \
     -MP \
-    -I uACPI/include -I frigg/include -fpermissive -fno-threadsafe-statics -fno-use-cxa-atexit -fno-rtti  -fno-exceptions -fno-use-cxa-atexit
+    -I uACPI/include -I frigg/include -fpermissive   -fno-exceptions
     #    -isystem freestnd-c-hdrs/include \ 
     
 
@@ -215,12 +214,12 @@ obj-$(ARCH)/%.sfn.o: %.sfn Makefile
 obj-$(ARCH)/%.c.o: %.c Makefile
 	@echo "  CC $@"
 	@mkdir -p "$(dir $@)"
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS)  $(CPPFLAGS) -c $< -o $@ -std=gnu11
 
 obj-$(ARCH)/%.cpp.o: %.cpp Makefile
 	@echo "  CXX $@"
 	@mkdir -p "$(dir $@)"
-	@$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@ -fno-threadsafe-statics -fno-use-cxa-atexit -fno-rtti
 
 
 # Compilation rules for *.S files.

@@ -1,11 +1,15 @@
 #include <libc.h>
 
 void *operator new(unsigned long size) {
-    return malloc(size);
+    void *ret = malloc(size);
+    memset(ret, 0, size);
+    return ret;
 }
 
 void *operator new[](unsigned long size) {
-    return malloc(size);
+    void *ret = malloc(size);
+    memset(ret, 0, size);
+    return ret;
 }
 
 void operator delete(void *ptr) {

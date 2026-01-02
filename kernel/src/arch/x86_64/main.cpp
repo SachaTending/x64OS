@@ -28,7 +28,7 @@ void fpu_init() {
 }
 static void early_serial_putc(char c) {
     //while ((inb(0x3f8 + 5) & 0x20) == 0);
-    //outb(0x3f8, c);
+    outb(0xe9, c);
 }
 
 void Arch::Init() {
@@ -84,6 +84,7 @@ void Arch::InitStage2() {
     int oldpr = 0;
     //uint64_t addr_end = 0x100000000;
     uint64_t addr_end=0xffffff;
+    /*
     log.info("Mapping memory...\n");
     for (uintptr_t addr = 0x0; addr < addr_end; addr += 4096) {
         oldpr = prog;
@@ -103,6 +104,7 @@ void Arch::InitStage2() {
         vmm_map_page(krnl_page, addr, addr, PTE_PRESENT | PTE_WRITABLE);
         vmm_map_page(krnl_page, addr + VMM_HIGHER_HALF, addr, PTE_PRESENT | PTE_WRITABLE);
     }
+    */ // PMM already maps all avaible addresses
     putc('\n');
     pmm_on_vmm_enabled();
     log.info("Switching pagetable...\n");
