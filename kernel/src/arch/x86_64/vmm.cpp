@@ -22,6 +22,7 @@ extern "C" {
         }
 
         pagemap->top_level = (uint64_t *)((void *)pagemap->top_level + VMM_HIGHER_HALF);
+        memset((void *)pagemap->top_level, 0, 4096);
         if (krnl_page != 0) {
             for (size_t i = 256; i < 512; i++) {
                 pagemap->top_level[i] = krnl_page->top_level[i];
@@ -60,24 +61,23 @@ extern "C" {
             log.error("Failed to get pml3\n");
             goto cleanup;
         }
+        //log.debug("got pml3 %lp ", pml3);
         //debug("got pml3 %lp ", pml3);
         pml2 = get_next_level(pml3, pml3_entry, true);
         if (pml2 == NULL) {
             log.error("Failed to get pml2\n");
             goto cleanup;
         }
-        //debug("got pml2, ", 1);
         pml1 = get_next_level(pml2, pml2_entry, true);
         if (pml1 == NULL) {
             log.error("Failed to get pml1\n");
             goto cleanup;
         }
-        //debug("got pml1, ", 1);
 
         if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
             //if (p) log.error("Entry for addr 0x%lx already present.\n", virt);
             log.debug("Entry for addr 0x%lx already present.\n", virt);
-            goto cleanup;
+            //goto cleanup;
         }
 
         ok = true;
@@ -176,5 +176,54 @@ extern "C" {
             : "r" ((void *)((uint64_t)pagemap->top_level - VMM_HIGHER_HALF))
             : "memory"
         );
+    }
+
+    bool vmm_unmap_page(struct pagemap *pagemap, uintptr_t virt, bool already_locked) {
+        if (!already_locked) {
+            spinlock_acquire(&pagemap->lock);
+        }
+
+        bool ok = false;
+        size_t pml4_entry = (virt & (0x1ffull << 39)) >> 39;
+        size_t pml3_entry = (virt & (0x1ffull << 30)) >> 30;
+        size_t pml2_entry = (virt & (0x1ffull << 21)) >> 21;
+        size_t pml1_entry = (virt & (0x1ffull << 12)) >> 12;
+
+        uint64_t *pml4 = pagemap->top_level;
+        uint64_t *pml3 = get_next_level(pml4, pml4_entry, false);
+        uint64_t *pml2;
+        uint64_t *pml1;
+        if (pml3 == NULL) {
+            goto cleanup;
+        }
+        pml2 = get_next_level(pml3, pml3_entry, false);
+        if (pml2 == NULL) {
+            goto cleanup;
+        }
+        pml1 = get_next_level(pml2, pml2_entry, false);
+        if (pml1 == NULL) {
+            goto cleanup;
+        }
+
+        if ((pml1[pml1_entry] & PTE_PRESENT) == 0) {
+            //errno = EINVAL;
+            goto cleanup;
+        }
+
+        ok = true;
+        pml1[pml1_entry] = 0;
+
+        asm volatile (
+            "invlpg (%0)"
+            :
+            : "r" (virt)
+            : "memory"
+        );
+
+    cleanup:
+        if (!already_locked) {
+            spinlock_release(&pagemap->lock);
+        }
+        return ok;
     }
 }

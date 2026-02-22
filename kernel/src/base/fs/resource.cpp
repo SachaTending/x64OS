@@ -19,6 +19,16 @@ int resource_default_ioctl(struct resource *this2, struct f_description *descrip
     return -1;
 }
 
+
+dev_t resource_create_dev_id(void) {
+    static dev_t dev_id_counter = 1;
+    static spinlock_t lock = (spinlock_t)SPINLOCK_INIT;
+    spinlock_acquire(&lock);
+    dev_t ret = dev_id_counter++;
+    spinlock_release(&lock);
+    return ret;
+}
+
 static ssize_t stub_read(struct resource *this2, struct f_description *description, void *buf, off_t offset, size_t count) {
     (void)this2;
     (void)description;
@@ -131,7 +141,7 @@ fail:
     return NULL;
 }
 #include <sched/sched.hpp>
-bool fdnum_close(Scheduler::thread_t *proc, int fdnum, bool lock) {
+bool fdnum_close(thread_t *proc, int fdnum, bool lock) {
     struct f_descriptor *fd;
     if (proc == NULL) {
         proc = Scheduler::GetCurrentThread();
@@ -173,7 +183,7 @@ cleanup:
 }
 
 int fdnum_create_from_fd(struct thread *_proc, struct f_descriptor *fd, int old_fdnum, bool specific) {
-    Scheduler::thread_t *proc = (Scheduler::thread_t *)_proc;
+    thread_t *proc = (thread_t *)_proc;
     if (proc == NULL) {
         proc = Scheduler::GetCurrentThread();
     }
@@ -189,14 +199,14 @@ int fdnum_create_from_fd(struct thread *_proc, struct f_descriptor *fd, int old_
     if (!specific) {
         for (int i = old_fdnum; i < MAX_FDS; i++) {
             if (proc->fds[i] == NULL) {
-                proc->fds[i] = (Scheduler::f_descriptor*)fd;
+                proc->fds[i] = (f_descriptor*)fd; // From TendingStream73: for some reason c compiler thinks that scheduler has f_descriptor
                 res = i;
                 goto cleanup;
             }
         }
     } else {
         fdnum_close(proc, old_fdnum, false);
-        proc->fds[old_fdnum] = (Scheduler::f_descriptor*)fd;
+        proc->fds[old_fdnum] = (f_descriptor*)fd;
         res = old_fdnum;
     }
 
@@ -205,7 +215,72 @@ cleanup:
     return res;
 }
 
-struct f_descriptor *fd_from_fdnum(Scheduler::thread_t *proc, int fdnum);
+
+int fdnum_create_from_resource(thread_t *proc, struct resource *res, int flags,
+                               int old_fdnum, bool specific) {
+    struct f_descriptor *fd = fd_create_from_resource(res, flags);
+    if (fd == NULL) {
+        return -1;
+    }
+
+    return fdnum_create_from_fd(proc, fd, old_fdnum, specific);
+}
+
+struct f_descriptor *fd_from_fdnum(thread_t *proc, int fdnum);
+
+ssize_t syscall_write(int fdnum, const void *buf, size_t count) {
+
+    //DEBUG_SYSCALL_ENTER("write(%d, %lx, %lu)", fdnum, buf, count);
+
+    ssize_t ret = -1;
+
+    thread_t *thread = Scheduler::GetCurrentThread();
+    struct f_description *description;
+    struct resource *res;
+    struct f_descriptor *fd = fd_from_fdnum(thread, fdnum);
+    if (fd == NULL) {
+        goto cleanup;
+    }
+
+    description = fd->description;
+    res = description->res;
+
+    ret = res->write(res, description, buf, description->offset, count);
+    if (ret < 0) {
+        ret = -1;
+        goto cleanup;
+    }
+
+    description->offset += ret;
+
+cleanup:
+    //DEBUG_SYSCALL_LEAVE("%lld", ret);
+    return ret;
+}
+
+int syscall_ioctl(int fdnum, uint64_t request, uint64_t arg) {
+
+    //DEBUG_SYSCALL_ENTER("ioctl(%d, %lu, %lx)", fdnum, request, arg);
+
+    int ret = -1;
+    struct f_description *description;
+    struct resource *res;
+
+    thread_t *proc = Scheduler::GetCurrentThread();
+
+    struct f_descriptor *fd = fd_from_fdnum(proc, fdnum);
+    if (fd == NULL) {
+        goto cleanup;
+    }
+
+    description = fd->description;
+    res = description->res;
+    ret = res->ioctl(res, description, request, arg);
+
+cleanup:
+    //DEBUG_SYSCALL_LEAVE("%d", ret);
+    return ret;
+}
 
 ssize_t syscall_read(int fdnum, void *buf, size_t count) {
 
@@ -213,7 +288,7 @@ ssize_t syscall_read(int fdnum, void *buf, size_t count) {
 
     ssize_t ret = -1;
 
-    Scheduler::thread_t *proc = Scheduler::GetCurrentThread();
+    thread_t *proc = Scheduler::GetCurrentThread();
     struct f_description *description;
     struct resource *res;
     struct f_descriptor *fd = fd_from_fdnum(proc, fdnum);

@@ -25,9 +25,12 @@ static int allocate_pid() {
     next_pid++;
     return out;
 }
-
+int force_openat(int dir_fdnum, const char *path, int flags, int mode, thread_t *thread);
+int fdnum_create_from_resource(thread_t *proc, struct resource *res, int flags,
+                               int old_fdnum, bool specific);
 void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, pagemap *pgm, const char **argv, const char **envp, auxval *aux) {
-    sched_run++;
+    //sched_run++;
+    Stop();
     //thread_t *thr = new thread_t;
     thread_t *thr = (thread_t*)((uint64_t)pmm_alloc(4)+VMM_HIGHER_HALF);
     memset(thr, 0, 4*4096);
@@ -38,6 +41,7 @@ void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, p
     thr->syscall = SYSCALL_SET_LINUX;
     memset((void *)thr->initial_stack, 0, STACK_SIZE);
     thr->pgm = pgm;
+    thr->cwd = vfs_root;
     if (usermode) vmm_map_range_no_krnl_map(thr->pgm, thr->initial_stack, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
     else vmm_map_range(thr->pgm, thr->initial_stack, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
     Arch::Scheduler::SetupSchedState(&thr->cpu_state, usermode, (uint64_t)entry, thr->initial_stack+STACK_SIZE);
@@ -107,7 +111,11 @@ void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, p
         //thr->cpu_state.regs.rsp -= ((uint64_t)stack) - ((uint64_t)stack_top);
         thr->cpu_state.regs.rsp = ((uint64_t)stack);
         //printf("new stack: 0x%lx\n", thr->cpu_state.regs.rsp);
-    } else {
+        //force_openat(AT_FDCWD, "/dev/console", O_RDWR, 30777, thr); // populate fd with console
+        vfs_node *console_node = VFS::GetNode(vfs_root, "/dev/console", true);
+        fdnum_create_from_resource(thr, console_node->resource, 0, 0, true);
+        fdnum_create_from_resource(thr, console_node->resource, 0, 1, true);
+        fdnum_create_from_resource(thr, console_node->resource, 0, 2, true);
         thr->cpu_state.regs.rsp += VMM_HIGHER_HALF;
     }
     // Find latest thread
@@ -121,7 +129,7 @@ void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, p
     tmp->next_thread = thr;
     thr->prev_thread = tmp;
     root_thread->prev_thread = thr;
-    sched_run--;
+    Start();
 }
 
 thread_t *find_thread_by_pid(int pid) {
@@ -237,7 +245,8 @@ void Scheduler::Start() {
 extern size_t global_ticks;
 static bool just_started = true;
 void sched_tick(cpu_ctx *regs, void *_) {
-    if (sched_run >= 1) return;
+    if (sched_run > 0) return;
+    //log.debug("sched_run: %d\n", sched_run);
     //log.info("Current thread: %s\n", current_thread->name);
     //log.info("%s(%d) [ %s(%d) ] %s(%d)\n", current_thread->prev_thread->name, current_thread->prev_thread->pid, current_thread->name, current_thread->pid, current_thread->next_thread->name, current_thread->next_thread->pid);
     if (just_started) {
@@ -263,7 +272,7 @@ void sched_tick(cpu_ctx *regs, void *_) {
         }
     }
     Arch::Scheduler::LoadState(regs, &current_thread->cpu_state);
-    //if (regs->rip < VMM_HIGHER_HALF) printf("rip: 0x%lx\n", regs->rip);
+    //if (regs->rip < VMM_HIGHER_HALF) log.debug("rip: 0x%lx\n", regs->rip);
     current_thread->state = STATE_RUNNING;
     global_ticks++;
     vmm_switch_to(current_thread->pgm);

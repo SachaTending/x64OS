@@ -9,7 +9,7 @@
 
 static Logger log("VFS");
 
-static spinlock_t vfs_lock = SPINLOCK_INIT;
+spinlock_t vfs_lock = SPINLOCK_INIT;
 
 struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *parent,
                                  const char *name, bool dir) {
@@ -23,7 +23,7 @@ struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *par
     if (dir) {
         node->children = (typeof(node->children))HASHMAP_INIT(256);
     }
-    log.debug("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d); ret=0x%lx\n", fs, parent, name, dir, node);
+    log.info("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d); ret=0x%lx\n", fs, parent, name, dir, node);
     return node;
 }
 vfs_node_t *vfs_root;
@@ -46,16 +46,19 @@ void VFS::AddFilesystem(fs_mount_t fs_mount, const char *identifier) {
     spinlock_acquire(&vfs_lock);
 
     HASHMAP_SINSERT(&filesystems, identifier, fs_mount);
+    log.info("Registered new filesystem: %s\n", identifier);
 
     spinlock_release(&vfs_lock);
 }
 void tmpfs_init(void);
+void devtmpfs_init(void);
 void VFS::Init(void) {
     log.debug("VFS::Init();\n");
     vfs_root = VFS::CreateNode(NULL, NULL, "", false);
 
     filesystems = (typeof(filesystems))HASHMAP_INIT(256);
     tmpfs_init();
+    devtmpfs_init();
     log.debug("VFS::Init(); done\n");
 }
 struct path2node_res {
@@ -81,6 +84,7 @@ static bool populate(struct vfs_node *node) {
     return true;
 }
 static struct path2node_res path2node(struct vfs_node *parent, const char *path) {
+    //printf("path2node(0x%lx, %s); called\n", parent, path);
     if (parent == 0) parent = vfs_root;
     if (path == NULL || strlen(path) == 0) {
         errno = ENOENT;
@@ -122,6 +126,8 @@ static struct path2node_res path2node(struct vfs_node *parent, const char *path)
         bool last = index == path_len;
 
         char *elem_str = (char *)strdup(elem);
+        elem_str[elem_len] = '\0';
+        //log.debug("path2node: elem=%s\n", elem_str);
 
         current_node = reduce_node(current_node, false);
 
@@ -131,14 +137,18 @@ static struct path2node_res path2node(struct vfs_node *parent, const char *path)
         // XXX page fault here (seemingly random)
         if (!HASHMAP_SGET(&current_node->children, new_node, elem_str)) {
             errno = ENOENT;
+            log.debug("path2node: returning ENOENT\n");
             if (last) {
                 return (struct path2node_res){current_node, NULL, elem_str};
             }
+            free(elem_str);
             return (struct path2node_res){NULL, NULL, NULL};
         }
 
         new_node = reduce_node(new_node, false);
         if (!populate(new_node)) {
+            log.debug("path2node: populate failed\n");
+            free(elem_str);
             return (struct path2node_res){NULL, NULL, NULL};
         }
 
@@ -155,6 +165,7 @@ static struct path2node_res path2node(struct vfs_node *parent, const char *path)
         if (S_ISLNK(current_node->resource->stat.st_mode)) {
             struct path2node_res r = path2node(current_node->parent, current_node->symlink_target);
             if (r.target == NULL) {
+                free(elem_str);
                 return (struct path2node_res){NULL, NULL, NULL};
             }
             current_node = r.target;
@@ -162,11 +173,14 @@ static struct path2node_res path2node(struct vfs_node *parent, const char *path)
 
         if (!S_ISDIR(current_node->resource->stat.st_mode)) {
             errno = ENOTDIR;
+            free(elem_str);
             return (struct path2node_res){NULL, NULL, NULL};
         }
+        free(elem_str);
     }
 
     errno = ENOENT;
+    log.debug("path2node(0x%lx, %s): ENOENT\n");
     return (struct path2node_res){NULL, NULL, NULL};
 }
 
@@ -338,7 +352,7 @@ cleanup:
     return ret;
 }
 
-struct f_descriptor *fd_from_fdnum(Scheduler::thread_t *proc, int fdnum) {
+struct f_descriptor *fd_from_fdnum(thread_t *proc, int fdnum) {
     if (proc == NULL) {
         proc = Scheduler::GetCurrentThread();
     }
@@ -365,7 +379,8 @@ cleanup:
 }
 
 static struct vfs_node *get_parent_dir(int dir_fdnum, const char *path) {
-    Scheduler::thread_t *thr = Scheduler::GetCurrentThread();
+    thread_t *thr = Scheduler::GetCurrentThread();
+    log.debug("get_parent_dir(%d, %s): thread's cwd: 0x%lx\n", dir_fdnum, path, thr->cwd);
 
     if (path != NULL && *path == '/') {
         return vfs_root;
@@ -391,6 +406,7 @@ static struct vfs_node *get_parent_dir(int dir_fdnum, const char *path) {
 
 bool vfs_fdnum_path_to_node(int dir_fdnum, const char *path, bool empty_path, bool enoent_error,
                             struct vfs_node **parent, struct vfs_node **node, char **basename) {
+    log.debug("vfs_fdnum_path_to_node(%d, %s, %s, %d, 0x%lx, 0x%lx, 0x%lx);\n", dir_fdnum, path, empty_path, enoent_error, parent, node, basename);
     if (!empty_path && (path == NULL || strlen(path) == 0)) {
         errno = ENOENT;
         return false;
@@ -401,10 +417,14 @@ bool vfs_fdnum_path_to_node(int dir_fdnum, const char *path, bool empty_path, bo
         return false;
     }
 
+    log.debug("vfs_fdnum_path_to_node(%d, %s, %s, %d, 0x%lx, 0x%lx, 0x%lx); parent_node=0x%lx\n", dir_fdnum, path, empty_path, enoent_error, parent, node, basename, parent_node);
+
     struct path2node_res res = path2node(parent_node, path);
     if (res.target == NULL && (errno == ENOENT && enoent_error)) {
+        log.debug("vfs_fdnum_path_to_node(%d, %s, %s, %d, 0x%lx, 0x%lx, 0x%lx); returning false bcz path2node returnet ENOENT\n", dir_fdnum, path, empty_path, enoent_error, parent, node, basename);
         return false;
     }
+    log.debug("vfs_fdnum_path_to_node: res.target_parent=0x%lx\n", res.target_parent);
 
     if (parent != NULL) {
         *parent = res.target_parent;
@@ -421,10 +441,84 @@ bool vfs_fdnum_path_to_node(int dir_fdnum, const char *path, bool empty_path, bo
             free(res.basename);
         }
     }
+    log.debug("vfs_fdnum_path_to_node: ret: parent=0x%lx, node=0x%lx, basename=0x%lx\n", *parent, *node, *basename);
 
     return true;
 }
 
+int force_openat(int dir_fdnum, const char *path, int flags, int mode, thread_t *thread) {
+    int ret = -1;
+
+    struct vfs_node *parent = NULL;
+    char *basename = NULL;
+
+    int create_flags, follow_links;
+    struct vfs_node *node;
+    struct f_descriptor *fd;
+
+        if (!vfs_fdnum_path_to_node(dir_fdnum, path, false, false, &parent, NULL, &basename)) {
+        goto cleanup;
+    }
+    log.debug("%s's parent: 0x%lx\n", path, parent);
+
+    if (parent == NULL) {
+        errno = ENOENT;
+        goto cleanup;
+    }
+
+    create_flags = flags & FILE_CREATION_FLAGS_MASK;
+    follow_links = (flags & O_NOFOLLOW) == 0;
+
+    node = VFS::GetNode(parent, basename, follow_links);
+    if (node == NULL) {
+        if ((create_flags & O_CREAT) != 0) {
+            //node = VFS::Create(parent, basename, (mode & ~proc->umask) | S_IFREG);
+            node = VFS::Create(parent, basename, (mode) | S_IFREG);
+        } else {
+            errno = ENOENT;
+            goto cleanup;
+        }
+    }
+
+    if (node == NULL) {
+        goto cleanup;
+    }
+
+    if (S_ISLNK(node->resource->stat.st_mode)) {
+        errno = ELOOP;
+        goto cleanup;
+    }
+
+    node = reduce_node(node, true);
+    if (node == NULL) {
+        goto cleanup;
+    }
+
+    if (!S_ISDIR(node->resource->stat.st_mode) && (flags & O_DIRECTORY) != 0) {
+        errno = ENOTDIR;
+        goto cleanup;
+    }
+
+    fd = fd_create_from_resource(node->resource, flags);
+    if (fd == NULL) {
+        goto cleanup;
+    }
+
+    if ((flags & O_TRUNC) != 0 && S_ISREG(node->resource->stat.st_mode)) {
+        node->resource->truncate(node->resource, fd->description, 0);
+    }
+
+    fd->description->node = node;
+    ret = fdnum_create_from_fd((struct thread *)thread, fd, 0, false);
+
+cleanup:
+    if (basename != NULL) {
+        free(basename);
+    }
+
+    //DEBUG_SYSCALL_LEAVE("%d", ret);
+    return ret;
+} 
 
 int syscall_openat(int dir_fdnum, const char *path, int flags, int mode) {
     //DEBUG_SYSCALL_ENTER("openat(%d, %s, %x, %o)", dir_fdnum, path, flags, mode);
@@ -443,6 +537,7 @@ int syscall_openat(int dir_fdnum, const char *path, int flags, int mode) {
     if (!vfs_fdnum_path_to_node(dir_fdnum, path, false, false, &parent, NULL, &basename)) {
         goto cleanup;
     }
+    log.debug("%s's parent: 0x%lx\n", path, parent);
 
     if (parent == NULL) {
         errno = ENOENT;

@@ -34,6 +34,12 @@ obj-y += $(addprefix base/fs/, \
 	initrd_unpacker.cpp \
 )
 
+# devtmpfs and related stuff
+obj-y += $(addprefix base/fs/dev/, \
+	devtmpfs.cpp \
+	fbdev.cpp \
+)
+
 # Program loading
 obj-y += $(addprefix base/prg/, \
 	lol_loader.cpp \

@@ -2,6 +2,8 @@
 
 .macro THUNK
     swapgs
+    mov %rsp, %gs:16
+    mov %gs:0, %rsp
 
     push %r15
     push %r14
@@ -36,8 +38,9 @@
 
     mov %rsp, %rdi
 
-    sti
+    //sti
     call syscall_c_entry
+    cli
 
     //mov %rax, 16(%rsp)
     //mov %gs:0x8, %rax
@@ -60,13 +63,14 @@
     pop %rbp
     pop %r8
     pop %r9
-    pop %rcx
-    pop %rdx
+    pop %r10
+    pop %r11
     pop %r12
     pop %r13
     pop %r14
     pop %r15
 
+    mov %gs:16, %rsp
     swapgs
 .endm
 

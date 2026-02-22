@@ -12,6 +12,7 @@
 #include <acpi.h>
 #include <arch/arch.hpp>
 
+#ifdef CONFIG_SPECIAL_EDITION
 #define CURRENT_YEAR        2025                            // Change this each year!
 
 int century_register = 0x00;                                // Set by ACPI table parsing code if possible
@@ -119,16 +120,17 @@ void read_rtc() {
             if(year < CURRENT_YEAR) year += 100;
       }
 }
-
+#endif
 
 static Logger *log = new Logger("Kernel");
 extern bool p;
 void unpack_initrd();
 void load_lol(resource *res, pagemap *pgm, uint64_t *entry);
 typedef void (*c)();
-#define PRG "/tcc.static"
-const char *argv[] = {PRG, "uname", "-a", NULL};
+#define PRG "/busybox.static"
+const char *argv[] = {PRG, "fbset", NULL};
 const char *envp[] = {"HOME=/", NULL};
+#ifdef CONFIG_SPECIAL_EDITION
 void countdown() {
     asm volatile ("cli");
     // No interrupts bcz we just gonna read cmos registers to get time and print it.
@@ -159,7 +161,13 @@ void countdown() {
         }
     }
 }
-
+#endif
+int g_errno; // idk
+extern "C" int *__errno_location(void) {
+    return &g_errno;
+}
+void fbdev_init();
+void console_init(void);
 void Kernel::Main() {
     p = true;
     log->info("Kernel::Main(); started.\n");
@@ -170,6 +178,9 @@ void Kernel::Main() {
     VFS::Init();
     VFS::Mount(vfs_root, NULL, "/", "tmpfs");
     VFS::Create(vfs_root, "/dev", 0755 | S_IFDIR);
+    VFS::Mount(vfs_root, NULL, "/dev", "devtmpfs");
+    console_init();
+    fbdev_init();
     unpack_initrd();
     vfs_node_t *node;
     #if CONFIG_TEST_VFS=='y'
@@ -188,9 +199,9 @@ void Kernel::Main() {
         log->info("File has been read successfully\n");
     }
     #endif
-    log->info("Легро, где арты?\n");
+    //log->info("Легро, где арты?\n");
     //#define PRG "/linux_compat_layer_test"
-    log->info("gonna launch busybox uname -a\n");
+    log->info("gonna launch busybox fbset\n");
     node = VFS::GetNode(vfs_root, PRG, true);
     log->info("node 0x%lx\n", node);
     if (node) {

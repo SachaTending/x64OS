@@ -14,7 +14,7 @@ struct iovec2 {
     void *iov_base;
     uint64_t iov_len;
 } __attribute__((packed));
-
+ssize_t syscall_write(int fdnum, const void *buf, size_t count);
 int sys_linux_writev(int fd, const struct iovec2 *iov, int iovcnt) {
     //return -1;
     //printf("writev(%d, 0x%lx, %d);\n", fd, iov, iovcnt);
@@ -25,9 +25,10 @@ int sys_linux_writev(int fd, const struct iovec2 *iov, int iovcnt) {
         char *iov_real_base = (char *)(USERSPACE_ADDR_TO_KRNL(iov[i].iov_base)+VMM_HIGHER_HALF);
         //printf("buf: 0x%lx, size: %lu\n", iov_real_base, iov[i].iov_len);
         //if (iov[i].iov_len == 18446744071562237456) continue; // skip
-        for (i2=0;i2<iov[i].iov_len;i2++) {
-            printf("%c", ((char *)iov_real_base)[i2]);
-        }
+        //for (i2=0;i2<iov[i].iov_len;i2++) {
+        //    printf("%c", ((char *)iov_real_base)[i2]);
+        //}
+        syscall_write(fd, (void*)iov_real_base, iov[i].iov_len);
         a+=iov[i].iov_len;
     }
     return a;
@@ -66,15 +67,16 @@ ssize_t syscall_read(int fdnum, void *buf, size_t count);
 
 void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
            int flags, vfs_node_t *node, size_t offset);
+bool munmap(struct pagemap *pagemap, uintptr_t addr, size_t length);
 
 int syscall_exec_PROTO(const char *path, const char **argv, const char **envp);
 
 uint64_t sys_linux_mmap(
            void *addr, size_t length, int prot, int flags,
            int fd, off_t offset);
-
+int syscall_ioctl(int fdnum, uint64_t request, uint64_t arg);
 uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6, cpu_ctx *ctx) {
-    Scheduler::thread_t *thr = Scheduler::GetCurrentThread();
+    thread_t *thr = Scheduler::GetCurrentThread();
     int ret;
     vmm_switch_to(krnl_page);
     //printf("SYSCALL %d START\n", syscall_num);
@@ -93,28 +95,31 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                         thr->syscall = SYSCALL_SET_TRANS;
                         return 0;
                     } else {
-                        if (arg1 == 1 || arg1 == 2) {
-                            for (int i=0;i<arg3;i++) printf("%c", ((char *)arg2)[i]);
-                            return arg3;
-                        } else {
-                            printf("write(%d, 0x%lx, %d\n): unknown fd %d\n", arg1, arg2, arg3, arg1);
-                            return arg3;
-                        }
+                        //printf("write(%d, 0x%lx, %d\n): unknown fd %d\n", arg1, arg2, arg3, arg1);
                         //printf("%s a", arg2);
+                        return syscall_write((int)arg1, (const void *)USERSPACE_ADDR_TO_KRNL(arg2), arg3);
                     }
                     break;
                 case 2:
+                    printf("before: 0x%lx\n", arg1);
+                    arg1 = USERSPACE_ADDR_TO_KRNL(arg1)+VMM_HIGHER_HALF;
+                    printf("after: 0x%lx\n", arg1);
                     printf("open(%s, %lu, %lu)\n", arg1, arg2, arg3);
                     ret = syscall_openat(AT_FDCWD, (const char *)arg1, arg2, arg3);
                     printf("open(%s, %lu, %lu) ret=%d\n", arg1, arg2, arg3, ret);
                     return ret;
                 case 9:
                     return sys_linux_mmap((void *)arg1, arg2, (int)arg3, (int)arg4, (int)arg5, arg6);
+                case 11:
+                    return munmap(thr->pgm, arg1, arg2);
                 case 16:
+                    printf("ioctl(?)(%d, %d, 0x%lx)\n", arg1, arg2, arg3);
                     if (arg2 == TIOCGWINSZ) {
                         struct winsize *size = (winsize *)arg3;
                         size->ws_col = 100;
                         size->ws_row = 100;
+                    } else {
+                        return syscall_ioctl((int)arg1, arg2, arg3);
                     }
                     return 0;
                 case 20:
@@ -164,12 +169,7 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                 case SYS_read:
                     return syscall_read(arg1, (void *)arg2, arg3);
                 case SYS_write:
-                    if (arg1 == 1) {
-                        for (int i=0;i<arg3;i++) printf("%c", ((char *)arg2)[i]);
-                        return arg3;
-                    } else {
-                        printf("write(%d, 0x%lx, %lu): i can't handle writes currently\n", arg1, arg2, arg3);
-                    }
+                    return syscall_write((int)arg1, (const void *)USERSPACE_ADDR_TO_KRNL(arg2), arg3);
                     //printf("%s a", arg2);
                     break;
                 // TODO: Write

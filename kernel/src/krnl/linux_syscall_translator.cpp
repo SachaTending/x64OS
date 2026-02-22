@@ -44,7 +44,7 @@ uint64_t sys_linux_mmap(
     if (prot & MMAP_LINUX_PROT_EXEC) prot2 |= PROT_EXEC;
     // Same for flags
     int flags2 = 0;
-    //if (flags & MMAP_LINUX_MAP_FIXED) flags2 |= MAP_FIXED;
+    if (flags & MMAP_LINUX_MAP_FIXED) flags2 |= MAP_FIXED;
     if (flags & MMAP_LINUX_MAP_ANONYMOUS) flags2 |= MAP_ANONYMOUS;
     if (flags & MMAP_LINUX_MAP_PRIVATE) flags2 |= MAP_PRIVATE;
     return (uint64_t)mmap(Scheduler::GetCurrentThread()->pgm, (uint64_t)addr, length, prot2, flags2, 0, offset);

@@ -25,26 +25,26 @@ enum syscall_set {
     SYSCALL_SET_X64OS
 };
 #define MAX_FDS 256
+typedef struct thread {
+    arch_specific_cpu_state_t cpu_state;
+    const char *name;
+    int pid;
+    thread_state state = STATE_NEW;
+    struct thread *next_thread;
+    struct thread *prev_thread;
+    uint64_t initial_stack;
+    struct pagemap *pgm;
+    uint64_t mmap_anon_base;
+    syscall_set syscall;
+    struct vfs_node *cwd;
+    spinlock_t fds_lock;
+    struct f_descriptor *fds[MAX_FDS];
+    struct {
+        uint64_t set_tid_addr;
+    } linux_specific;
+} thread_t;
 namespace Scheduler
 {
-    typedef struct thread {
-        arch_specific_cpu_state_t cpu_state;
-        const char *name;
-        int pid;
-        thread_state state = STATE_NEW;
-        struct thread *next_thread;
-        struct thread *prev_thread;
-        uint64_t initial_stack;
-        struct pagemap *pgm;
-        uint64_t mmap_anon_base;
-        syscall_set syscall;
-        struct vfs_node *cwd;
-        spinlock_t fds_lock;
-        struct f_descriptor *fds[MAX_FDS];
-        struct {
-            uint64_t set_tid_addr;
-        } linux_specific;
-    } thread_t;
     void Init();
     void CreateThread(const char *name, void (*entry)(), bool usermode, struct pagemap *pgm, const char **argv=0, const char **envp=0, auxval *aux=0);
     void Start();

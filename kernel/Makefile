@@ -111,7 +111,7 @@ ifeq ($(ARCH),x86_64)
         -mno-80387 \
         -mno-mmx \
         -mno-red-zone \
-        -mcmodel=kernel
+        -mcmodel=kernel -O1
     override LDFLAGS += \
         -m elf_x86_64
     override NASMFLAGS := \

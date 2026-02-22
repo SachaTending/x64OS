@@ -48,6 +48,7 @@ void arch_gdt_init();
 void arch_idt_init();
 void arch_tss_setup();
 void arch_setup_syscall();
+void arch_setup_percore_struct();
 void Arch::InitStage2() {
     // This stage is only called when PMM is initialized
     // TendingStream73: I feel like this should be done by main kernel, not by arch-depended code
@@ -65,9 +66,9 @@ void Arch::InitStage2() {
         log.error("Failed to allocate top level pagetable.\n");
         while (1);
     }
-    uint64_t _a = (uint64_t)krnl_page->top_level;
-    _a += VMM_HIGHER_HALF;
-    krnl_page->top_level = (uint64_t *)_a;
+    //uint64_t _a = (uint64_t)krnl_page->top_level;
+    //_a += VMM_HIGHER_HALF;
+    krnl_page->top_level = (uint64_t *)(((uint64_t)krnl_page->top_level)+VMM_HIGHER_HALF);
     uint64_t kstart = ALIGN_DOWN((uint64_t)&kernel_start, 4096),
         kend = ALIGN_UP((uint64_t)&kernel_end, 4096);
     log.info("Populating kernel's pml1...\n");
@@ -115,10 +116,37 @@ void Arch::InitStage2() {
     log.info("Loading IDT...\n");
     arch_idt_init();
     arch_setup_syscall();
+    arch_setup_percore_struct();
 #ifdef CONFIG_ARCH_TEST_INT_SUBSYS
     log.info("Triggerint interrupt 0x30...\n");
     asm volatile ("int $0x32");
 #endif
+}
+
+static inline uint64_t wrmsr(uint32_t msr, uint64_t val) {
+    uint32_t eax = (uint32_t)val;
+    uint32_t edx = (uint32_t)(val >> 32);
+    asm volatile (
+        "wrmsr\n\t"
+        :
+        : "a" (eax), "d" (edx), "c" (msr)
+        : "memory"
+    );
+    return ((uint64_t)edx << 32) | eax;
+}
+
+
+struct per_core_struct {
+    void *syscall_stack;
+    void *filler;
+    void *user_stack;
+} __attribute__((packed));
+void arch_setup_percore_struct() {
+    per_core_struct *st = new per_core_struct;
+    st->syscall_stack = (void *)new char[128*1024];
+    st->syscall_stack = (void *)(((uint64_t)st->syscall_stack)+128*1024);
+    wrmsr(0xC0000102, (uint64_t)st);
+    wrmsr(0xC0000084, 0x200);
 }
 
 void Arch::InitACPI() {

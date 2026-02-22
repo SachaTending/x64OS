@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
 int printf(const char *, ...);
+int snprintf(char* s, size_t count, const char* format, ...);
 void *memset (void *__s, int __c, size_t __n);
 void memcpy(void *dst, const void *src, size_t n);
 int memcmp (const void *__s1, const void *__s2, size_t __n);

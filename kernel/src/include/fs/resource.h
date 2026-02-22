@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sched/sched.hpp>
 #include <fcntl.h>
+#include <event.h>
 
 struct process;
 struct f_description;
@@ -13,7 +14,7 @@ struct f_description;
 struct resource {
     int res_size;
     int status;
-    //struct event event;
+    struct event event;
     size_t refcount;
     spinlock_t lock;
     struct stat stat;
@@ -56,3 +57,6 @@ namespace Resource
 #define FILE_STATUS_FLAGS_MASK (~(FILE_CREATION_FLAGS_MASK | FILE_DESCRIPTOR_FLAGS_MASK))
 struct f_descriptor *fd_create_from_resource(struct resource *res, int flags);
 int fdnum_create_from_fd(struct thread *proc, struct f_descriptor *fd, int old_fdnum, bool specific);
+int resource_default_ioctl(struct resource *this2, struct f_description *description, uint64_t request, uint64_t arg);
+
+dev_t resource_create_dev_id(void);

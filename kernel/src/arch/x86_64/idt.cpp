@@ -57,13 +57,14 @@ extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
     if (ctx->int_vector == 0xe) {
         //log.debug("got pagefault\n");
         //log.debug("addr: 0x%lx err: 0x%lx, rip: 0x%lx\n", ctx->cr2, ctx->err, ctx->rip);
-        if (ctx->cr2 > VMM_HIGHER_HALF) {
-            log.debug("gonna fix that\n");
-            pagemap *page = krnl_page;
-            if (Scheduler::GetCurrentThread()) page = (pagemap *)Scheduler::GetCurrentThread()->pgm;
-            vmm_map_page(page, ctx->cr2, ctx->cr2-VMM_HIGHER_HALF, PTE_PRESENT);
-            return ctx;
-        } else if (mmap_pf(ctx)) return ctx;
+        if (mmap_pf(ctx)) return ctx;
+        //if (ctx->cr2 > VMM_HIGHER_HALF) {
+        //    log.debug("gonna fix that\n");
+        //    pagemap *page = krnl_page;
+        //    if (Scheduler::GetCurrentThread()) page = (pagemap *)Scheduler::GetCurrentThread()->pgm;
+        //    vmm_map_page(page, ctx->cr2, ctx->cr2-VMM_HIGHER_HALF, PTE_PRESENT);
+        //    return ctx;
+        //} else if (mmap_pf(ctx)) return ctx;
     }
     //printf("GOT INTERRUPT 0x%lx(%lu)!!!\n", ctx->int_vector, ctx->int_vector);
     //printf("RSP: 0x%lx\n", ctx->rsp);
