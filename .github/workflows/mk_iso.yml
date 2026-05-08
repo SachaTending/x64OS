@@ -14,7 +14,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: ilammy/setup-nasm@v1
-    - name: make
+    - name: Install xorriso  
+      run: sudo apt-get update && sudo apt-get install -y xorriso
+    - name: Compile kernel and make iso
       run: make -j$(nproc) template-x86_64.iso
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.3.1
