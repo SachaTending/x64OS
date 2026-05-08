@@ -1,0 +1,27 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ilammy/setup-nasm@v1
+    - name: download submodules
+      run: git submodule init && git submodule update
+    - name: make
+      run: make -j$(nproc) template-x86_64.iso
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4.3.1
+      with:
+        # Artifact name
+        name: Bootable image
+        # A file, directory or wildcard pattern that describes what to upload
+        path: template-x86_64.iso
