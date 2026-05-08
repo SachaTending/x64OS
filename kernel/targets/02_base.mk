@@ -7,6 +7,7 @@ obj-y += $(addprefix base/, \
 	hpet.cpp \
 	cxx_runtime.cpp \
 	sched.cpp \
+	rng.cpp \
 )
 
 # IO
@@ -24,6 +25,7 @@ obj-y += $(addprefix base/flanterm/, \
 obj-y += $(addprefix base/memory/, \
 	pmm.cpp \
 	mmap.cpp \
+	liballoc.cpp \
 )
 
 # Filesystem

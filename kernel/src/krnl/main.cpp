@@ -11,6 +11,8 @@
 #include <uacpi/tables.h>
 #include <acpi.h>
 #include <arch/arch.hpp>
+#include <config.h>
+#include <rng.hpp>
 
 #ifdef CONFIG_SPECIAL_EDITION
 #define CURRENT_YEAR        2025                            // Change this each year!
@@ -127,8 +129,8 @@ extern bool p;
 void unpack_initrd();
 void load_lol(resource *res, pagemap *pgm, uint64_t *entry);
 typedef void (*c)();
-#define PRG "/busybox.static"
-const char *argv[] = {PRG, "fbset", NULL};
+#define PRG "/kexec"
+const char *argv[] = {PRG, "/kexec", NULL};
 const char *envp[] = {"HOME=/", NULL};
 #ifdef CONFIG_SPECIAL_EDITION
 void countdown() {
@@ -204,18 +206,25 @@ void Kernel::Main() {
     log->info("gonna launch busybox fbset\n");
     node = VFS::GetNode(vfs_root, PRG, true);
     log->info("node 0x%lx\n", node);
-    if (node) {
+    if (node && 1) {
         //log->info("node 0x%lx opened\n", node);
         pagemap *pgm = vmm_new_pagemap();
         auxval aux, ld_auxv;
         const char *ld;
         bool ret = elf_load(pgm, node->resource, 0x0, &aux, &ld);
+        uint64_t prg_entry = aux.at_entry;
         if (ld != 0) {
             vfs_node_t *ld_open = VFS::GetNode(vfs_root, ld, true);
+            if (ld_open == NULL) {
+                log->error("Failed to load linker %s for %s: File not found\n", ld, PRG);
+                PANIC("Failed to start %s as init program.\n", PRG);
+            }
             ret = elf_load(pgm, ld_open->resource, 0x40000000, &ld_auxv, NULL);
             if (ret == false) {
                 log->error("Failed to load %s linker for %s\n", ld, PRG);
+                PANIC("Failed to start %s as init program.\n", PRG);
             }
+            prg_entry = ld_auxv.at_entry;
         }
         //ret = elf_load(pgm, ld_open->resource, 0x40000000, &ld_auxv, NULL);
         if (ret == false) {
@@ -223,7 +232,7 @@ void Kernel::Main() {
             PANIC("Failed to start %s as init program.\n", PRG);
         }
         log->info("%s info:\n", PRG);
-        log->info("entry: 0x%lx\n", aux.at_entry);
+        log->info("entry: 0x%lx\n", prg_entry);
         if (ld) {
             log->info("interpreter: %s\n", ld);
         } else {
@@ -231,10 +240,18 @@ void Kernel::Main() {
         }
         Scheduler::Stop();
         log->info("pgm: 0x%lx\n", pgm);
-        Scheduler::CreateThread(PRG, (void (*)())aux.at_entry, true, pgm, argv, envp, &aux);
+        Scheduler::CreateThread(PRG, (void (*)())prg_entry, true, pgm, argv, envp, &aux);
         Scheduler::Start();
     } else {
-
+        node = VFS::GetNode(vfs_root, "/dev/fb0", true);
+        uint32_t a = 0;
+        uint32_t shift = 0;
+        for (int i=0;i<1000000;i++) {
+            node->resource->write(node->resource, 0, &a, i*4, 4);
+            a ^= rand() & (0xf << shift);
+            shift += 4;
+            if (shift == 24) shift=0;
+        }
     }
     while (1);
 }

@@ -14,7 +14,7 @@ spinlock_t vfs_lock = SPINLOCK_INIT;
 struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *parent,
                                  const char *name, bool dir) {
     struct vfs_node *node = new vfs_node_t;
-    log.debug("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d);\n", fs, parent, name, dir);
+    //log.debug("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d);\n", fs, parent, name, dir);
     node->name = (char *)strdup(name);
 
     node->parent = parent;
@@ -23,7 +23,7 @@ struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *par
     if (dir) {
         node->children = (typeof(node->children))HASHMAP_INIT(256);
     }
-    log.info("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d); ret=0x%lx\n", fs, parent, name, dir, node);
+    //log.info("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d); ret=0x%lx\n", fs, parent, name, dir, node);
     return node;
 }
 vfs_node_t *vfs_root;

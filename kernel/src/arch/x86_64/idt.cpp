@@ -74,8 +74,7 @@ extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
     //}
     if (ctx->int_vector < 32) {
         #define REPORT(print_func) {      \   
-            print_func("Vector: 0x%lx(%lu) CR2=0x%016lx RIP=0x%016lx\n", ctx->int_vector, ctx->int_vector, ctx->cr2, ctx->rip); \
-            print_func("RIP: 0x%lx\n", ctx->rip); \
+            print_func("Vector: 0x%lx(%lu) CR2=0x%016lx RIP=0x%016lx RAX=0x%016lx RDX=0x%016lx\n", ctx->int_vector, ctx->int_vector, ctx->cr2, ctx->rip, ctx->rax, ctx->rdx); \
             print_func("ERR: 0x%lx\n", ctx->err); \
             print_func("RSP: 0x%lx\n", ctx->rsp); \
             print_func("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx\n", ctx->cs, ctx->ss, ctx->ds, ctx->es); \

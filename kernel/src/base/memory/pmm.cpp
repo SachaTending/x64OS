@@ -5,6 +5,7 @@
 #include <logging.hpp>
 #include <arch/vmm.h>
 //#include <vmm.h>
+#include <config.h>
 
 static Logger log("PMM(From lyre os)");
 
@@ -72,9 +73,12 @@ static inline void bitmap_reset(void *bitmap, size_t bit) {
 static size_t bitmap_size;
 
 void *pmm_alloc_nozero(size_t pages);
+#ifndef CONFIG_USE_LIBALLOC
 void slab_init();
+#endif
 void pmm_init(void) {
     log.name = "PMM(From lyre os)";
+    log.debug("Starting...\n");
     // TODO: Check if memmap and hhdm responses are null and panic
     struct limine_memmap_response *memmap = memmap_request.response;
     struct limine_hhdm_response *hhdm = hhdm_request.response;
@@ -154,7 +158,9 @@ void pmm_init(void) {
 
     log.debug("pmm: Usable memory: %luMiB\n", (usable_pages * 4096) / 1024 / 1024);
     log.debug("pmm: Reserved memory: %luMiB\n", (reserved_pages * 4096) / 1024 / 1024);
+    #ifndef CONFIG_USE_LIBALLOC
     slab_init();
+    #endif
 }
 static const char *memmap_type_str(int t) {
     switch (t)
@@ -215,6 +221,7 @@ static void *inner_alloc(size_t pages, uint64_t limit) {
 }
 
 extern "C" void *pmm_alloc(size_t pages) {
+    //log.debug("pmm_alloc(%lu);\n", pages);
     void *ret = pmm_alloc_nozero(pages);
     if (ret != NULL) {
         memset((void *)((uint64_t)ret + VMM_HIGHER_HALF), 0, pages * PAGE_SIZE);
@@ -258,6 +265,7 @@ extern "C" void pmm_free(void *addr, size_t pages) {
     spinlock_release(&lock);
 }
 
+#ifndef CONFIG_USE_LIBALLOC
 
 struct slab {
     spinlock_t lock;
@@ -457,5 +465,5 @@ extern "C" {
         return slab_realloc(ptr, l);
     }
 }
-
+#endif
 size_t used_ram=0;

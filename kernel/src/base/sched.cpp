@@ -116,7 +116,8 @@ void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, p
         fdnum_create_from_resource(thr, console_node->resource, 0, 0, true);
         fdnum_create_from_resource(thr, console_node->resource, 0, 1, true);
         fdnum_create_from_resource(thr, console_node->resource, 0, 2, true);
-        thr->cpu_state.regs.rsp += VMM_HIGHER_HALF;
+        //thr->cpu_state.regs.rsp += VMM_HIGHER_HALF;
+        log.debug("RSP: 0x%016lx\n", thr->cpu_state.regs.rsp);
     }
     // Find latest thread
     thread_t *tmp = root_thread;
@@ -248,7 +249,7 @@ void sched_tick(cpu_ctx *regs, void *_) {
     if (sched_run > 0) return;
     //log.debug("sched_run: %d\n", sched_run);
     //log.info("Current thread: %s\n", current_thread->name);
-    //log.info("%s(%d) [ %s(%d) ] %s(%d)\n", current_thread->prev_thread->name, current_thread->prev_thread->pid, current_thread->name, current_thread->pid, current_thread->next_thread->name, current_thread->next_thread->pid);
+    //if (current_thread->pid != 0 )log.debug("%s(%d) [ %s(%d) ] %s(%d)\n", current_thread->prev_thread->name, current_thread->prev_thread->pid, current_thread->name, current_thread->pid, current_thread->next_thread->name, current_thread->next_thread->pid);
     if (just_started) {
         just_started = false;
         current_thread = current_thread->prev_thread; // HACK: Without this only the next thread gets executed. This hack allows to execute first thread

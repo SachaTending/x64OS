@@ -22,7 +22,7 @@ void fpu_init() {
     asm("mov %0, %%cr0" :: "r"(t));
     asm("mov %%cr4, %0" : "=r"(t));
     t |= 3 << 9;
-    //t |= 1 << 16;
+    t |= 1 << 16;
     asm("mov %0, %%cr4" :: "r"(t));
     asm("fninit");
 }

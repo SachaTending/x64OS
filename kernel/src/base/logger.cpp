@@ -2,7 +2,8 @@
 #include <logging.hpp>
 #include <printf/printf.h>
 #include <stdint.h>
-//#include <sched.hpp>
+#include <arch/arch.hpp>
+#include <sched/sched.hpp>
 
 void spinlock_printf();
 void release_printf();
@@ -36,10 +37,14 @@ static size_t get_used_ram() {
     return used_ram;
 }
 void pre_log2() {
+    //STOP_INTERRUPTS;
+    Scheduler::Stop();
     //stop_sched();
 }
 
 void post_log2() {
+    //START_INTERRUPTS;
+    Scheduler::Start();
     //resume_sched();
 }
 static inline unsigned long save_irqdisable(void)

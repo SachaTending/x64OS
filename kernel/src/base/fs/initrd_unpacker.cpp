@@ -81,6 +81,7 @@ static void unpack_addr(void *file_addr) {
                 struct resource *resource = node->resource;
                 //ASSERT(resource->write(resource, NULL, (void *)current_file + 512, 0, size) == (ssize_t)size);
                 resource->write(resource, NULL, (void *)((uint64_t)current_file + 512), 0, size);
+                log.info("FILE: %s\n", name);
                 break;
             }
             case TAR_FILE_TYPE_SYMLINK: {
@@ -96,6 +97,7 @@ static void unpack_addr(void *file_addr) {
                     PANIC("Failed to create directory %s\n", name);
                     //panic(NULL, true, "Failed to allocate an initramfs node");
                 }
+                log.info("DIR: %s\n", name);
                 break;
             }
             case TAR_FILE_TYPE_GNU_LONG_PATH:

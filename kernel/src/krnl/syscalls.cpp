@@ -79,7 +79,7 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
     thread_t *thr = Scheduler::GetCurrentThread();
     int ret;
     vmm_switch_to(krnl_page);
-    //printf("SYSCALL %d START\n", syscall_num);
+    printf("SYSCALL %d START\n", syscall_num);
     //thr->syscall = SYSCALL_SET_X64OS;
     switch (thr->syscall) {
         case SYSCALL_SET_LINUX:
@@ -112,6 +112,9 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     return sys_linux_mmap((void *)arg1, arg2, (int)arg3, (int)arg4, (int)arg5, arg6);
                 case 11:
                     return munmap(thr->pgm, arg1, arg2);
+                case 12:
+                    printf("brk(0x%lx)\n", arg1);
+                    return -ENOSYS;
                 case 16:
                     printf("ioctl(?)(%d, %d, 0x%lx)\n", arg1, arg2, arg3);
                     if (arg2 == TIOCGWINSZ) {
@@ -152,7 +155,7 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     return syscall_openat(arg1, (const char *)arg2, (int)arg3, 777);
                 default:
                     printf("LINUX COMPATIBILITY MODE: Unknown syscall %lu\n", syscall_num);
-                    return 0;
+                    return -ENOSYS;
                     break;
             }
             break;

@@ -43,7 +43,7 @@ void exit_linux() {
     asm volatile ("syscall" : "=a" (ret) : "0" (60), "D" (-1) : "rcx", "r11", "memory");
 }
 
-
+int main();
 #define MAGIC_TEXT "This program is only for x64OS. Please use x64OS to run this program.\n"
 void __mlibc_entry(uintptr_t *entry_stack, int (*main_fn)(int argc, char *argv[], char *env[]));;
 void pre_main(uint64_t stack, uint64_t fn) {
@@ -54,7 +54,7 @@ void pre_main(uint64_t stack, uint64_t fn) {
     debug("i'm gonna try to at least temporarly write code without libc\n");
     //exec("/busybox.static");
     debug("uhh, gonnal call __mlibc_entry bcz i can\n");
-    __mlibc_entry((uintptr_t *)stack, (int (*)(int argc, char *argv[], char *env[]))fn);
+    __mlibc_entry((uintptr_t *)stack, (int (*)(int argc, char *argv[], char *env[]))main);
     while(1);
 }
 int main() {

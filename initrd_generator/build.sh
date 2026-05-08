@@ -2,7 +2,7 @@
 
 rm -rf .tmp
 mkdir .tmp
-cp base_root/* .tmp -v
+cp base_root/* .tmp -v -r
 
 cd init
 #nasm -felf64 init.asm -o init.o

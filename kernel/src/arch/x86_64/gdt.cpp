@@ -28,7 +28,7 @@ struct tss_descriptor {
 };
 
 struct gdt_desc {
-    gdt_struct descs[10];
+    gdt_struct descs[11];
     tss_descriptor tss;
 };
 

@@ -199,8 +199,8 @@ void kmain(void) {
     // Fetch the first framebuffer.
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
     Arch::Init();
-    setup_flanterm(framebuffer);
     pmm_init();
+    setup_flanterm(framebuffer);
     callConstructors();
     Arch::InitStage2();
     pre_sched_uacpi_init();

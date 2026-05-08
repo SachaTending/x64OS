@@ -3,6 +3,9 @@
 
 static Logger log("VMM");
 bool p = false;
+
+#define INVLPG(addr) asm volatile("invlpg (%0)" :: "r"(addr) : "memory");
+
 extern "C" {
     void *pmm_alloc(size_t pages);
     uint64_t *get_next_level(uint64_t *top_level, size_t idx, bool allocate);
@@ -41,6 +44,7 @@ extern "C" {
     }
 
     bool vmm_map_page(struct pagemap *pagemap, uintptr_t virt, uintptr_t phys, uint64_t flags) {
+        INVLPG(virt);
         if (pagemap == NULL) return false;
         spinlock_acquire(&(pagemap->lock));
         flags |= PTE_USER;
@@ -76,7 +80,7 @@ extern "C" {
 
         if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
             //if (p) log.error("Entry for addr 0x%lx already present.\n", virt);
-            log.debug("Entry for addr 0x%lx already present.\n", virt);
+            //log.debug("Entry for addr 0x%lx already present.\n", virt);
             //goto cleanup;
         }
 

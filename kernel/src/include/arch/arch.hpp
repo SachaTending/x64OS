@@ -79,4 +79,4 @@ extern madt_io_apic_irq_map_vec_t madt_io_apic_irq_map_vec;
 #define STOP_INTERRUPTS ASM ("cli")
 #define START_INTERRUPTS ASM ("sti")
 
-#define HCF ASM ("1: hlt; jmp 1") // aka halt and catch fire
+#define HCF STOP_INTERRUPTS; ASM ("1: hlt; jmp 1") // aka halt and catch fire
