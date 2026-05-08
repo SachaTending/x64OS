@@ -3,3 +3,5 @@ x64OS v2 is a complete of x64OS, which should eliminate all previous erros, such
 
 # Is docmentation avaible?
 [Yes](docs/README.md)
+
+[![C/C++ CI](https://github.com/SachaTending/x64OS/actions/workflows/mk_iso.yml/badge.svg)](https://github.com/SachaTending/x64OS/actions/workflows/mk_iso.yml)
