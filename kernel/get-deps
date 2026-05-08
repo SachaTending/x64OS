@@ -8,6 +8,7 @@ test -z "$srcdir" && srcdir=.
 cd "$srcdir"
 
 clone_repo_commit() {
+    rm -rf $2
     if test -d "$2/.git"; then
         git -C "$2" reset --hard
         git -C "$2" clean -fd
