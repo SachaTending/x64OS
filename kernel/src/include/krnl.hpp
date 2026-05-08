@@ -14,3 +14,9 @@ namespace Kernel
 
 __attribute__((noreturn)) void panic(const char *file, size_t lnum, const char *msg, ...);
 #define PANIC(...) panic(__FILE__, __LINE__, __VA_ARGS__)
+
+extern const char *build_host;
+extern const char *build_user;
+extern const char *git_hash;
+extern const char *version;
+extern const char *full_ver;

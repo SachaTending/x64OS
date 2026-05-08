@@ -8,6 +8,7 @@ obj-y += $(addprefix base/, \
 	cxx_runtime.cpp \
 	sched.cpp \
 	rng.cpp \
+	version.cpp \
 )
 
 # IO

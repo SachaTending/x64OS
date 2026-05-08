@@ -173,7 +173,7 @@ void console_init(void);
 void Kernel::Main() {
     p = true;
     log->info("Kernel::Main(); started.\n");
-    log->info("x64OS v2 ALPHA kernel v0.1\n");
+    log->info("%s\n", full_ver);
     log->info("idk what to put here, but this is a Kernel::Main\n");
    // log->info("Starting countdown...\n");
     //countdown();

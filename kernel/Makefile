@@ -64,7 +64,10 @@ endif
 
 # Check if CC is Clang.
 override CC_IS_CLANG := $(shell ! $(CC) --version 2>/dev/null | grep -q '^Target: '; echo $$?)
-
+GIT_HASH := $(shell git rev-parse --short HEAD)
+BUILD_USER := $(shell whoami)
+BUILD_HOST := $(shell hostname)
+BUILD_DATE := $(shell date -u '+%Y-%m-%d\ %H:%M:%S\ UTC')
 # Internal C flags that should not be changed by the user.
 override CFLAGS += \
     -Wall \
@@ -75,7 +78,11 @@ override CFLAGS += \
     -fno-PIC \
     -ffunction-sections \
     -fdata-sections \
-    -ffreestanding 
+    -ffreestanding \
+    -D__GIT_HASH=\"$(GIT_HASH)\" \
+    -D__BUILD_USER=\"$(BUILD_USER)\" \
+    -D__BUILD_HOST=\"$(BUILD_HOST)\" \
+    -D__BUILD_DATE=\"$(BUILD_DATE)\" \
 
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
