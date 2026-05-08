@@ -211,8 +211,8 @@ static ssize_t tty_write(struct resource *_this, struct f_description *descripti
 static int tty_ioctl(struct resource *_this, struct f_description *description, uint64_t request, uint64_t argp) {
     switch (request) {
         case TIOCGWINSZ: {
-            struct winsize *w = (struct winsize *)argp;
             if (term_context != NULL) {
+                struct winsize *w = (struct winsize *)argp;
                 struct limine_framebuffer *fb = current_fb;
                 w->ws_row = term_context->rows;
                 w->ws_col = term_context->cols;
