@@ -8,6 +8,7 @@
 #include <spinlock.h>
 #include <termios.h>
 #include <asm/ioctls.h>
+#include <sys/ioctl.h>
 #include <errno.h>
 #include <sys/ttydefaults.h>
 #include <poll.h>
