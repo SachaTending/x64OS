@@ -239,7 +239,7 @@ void Kernel::Main() {
             log->info("No interpreter.\n");
         }
         Scheduler::Stop();
-        log->info("pgm: 0x%lx\n", pgm);
+        log->info("pgm: 0x%016lx\n", pgm);
         Scheduler::CreateThread(PRG, (void (*)())prg_entry, true, pgm, argv, envp, &aux);
         Scheduler::Start();
     } else {
