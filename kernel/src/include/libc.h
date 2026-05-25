@@ -22,6 +22,7 @@ void *pmm_alloc(size_t pages);
 void pmm_free(void *addr, size_t pages);
 
 extern volatile limine_hhdm_request hhdm_request;
+extern volatile uint64_t hhdm;
 #define VMM_HIGHER_HALF hhdm_request.response->offset
 
 #ifdef __cplusplus

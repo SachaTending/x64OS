@@ -361,12 +361,14 @@ struct f_descriptor *fd_from_fdnum(thread_t *proc, int fdnum) {
     spinlock_acquire(&proc->fds_lock);
 
     if (fdnum < 0 || fdnum >= MAX_FDS) {
+        printf("fd_from_fdnum(0x%016lx, %d): invalid fd\n", proc, fdnum);
         //errno = EBADF;
         goto cleanup;
     }
 
     ret = (struct f_descriptor *)proc->fds[fdnum];
     if (ret == NULL) {
+        printf("fd_from_fdnum(0x%016lx, %d): invalid fd, it just doesn't exist\n", proc, fdnum);
         //errno = EBADF;
         goto cleanup;
     }

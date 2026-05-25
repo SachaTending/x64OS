@@ -178,7 +178,7 @@ void unpack_initrd();
 
 extern size_t regsitered_loggers;
 #include <vfs.hpp>
-
+volatile uint64_t hhdm;
 void kmain(void) {
     //print("arch stuff has been initialized, btw this is a early kernel print\n");
     //print("x64OS v2 IS REAL!\n");
@@ -196,6 +196,7 @@ void kmain(void) {
         hcf();
     }
 
+    hhdm = hhdm_request.response->offset; // backup hhdm
     // Fetch the first framebuffer.
     struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
     Arch::Init();

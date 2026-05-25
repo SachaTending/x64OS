@@ -6,6 +6,7 @@
 #include <arch/vmm.h>
 #include <krnl.hpp>
 #include <sched/sched.hpp>
+#include <arch/arch.hpp>
 
 static Logger log("IDT");
 
@@ -73,8 +74,8 @@ extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
     //    return ctx;
     //}
     if (ctx->int_vector < 32) {
-        #define REPORT(print_func) {      \   
-            print_func("Vector: 0x%lx(%lu) CR2=0x%016lx RIP=0x%016lx RAX=0x%016lx RDX=0x%016lx\n", ctx->int_vector, ctx->int_vector, ctx->cr2, ctx->rip, ctx->rax, ctx->rdx); \
+        #define REPORT(print_func) while (0) {      \   
+            print_func("Vector: 0x%lx(%lu) CR2=0x%016lx RIP=0x%016lx RAX=0x%016lx RDX=0x%016lx ERR: 0x%lx\n", ctx->int_vector, ctx->int_vector, ctx->cr2, ctx->rip, ctx->rax, ctx->rdx, ctx->err); \
             print_func("ERR: 0x%lx\n", ctx->err); \
             print_func("RSP: 0x%lx\n", ctx->rsp); \
             print_func("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx\n", ctx->cs, ctx->ss, ctx->ds, ctx->es); \
@@ -87,8 +88,13 @@ extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
             ctx->rflags &= ~((1UL << 8) | (1UL << 14) | (1UL << 17));
             return ctx;
         } else {
-            REPORT(printf);
+            log.debug("Vector: 0x%lx(%lu) CR2=0x%016lx RIP=0x%016lx RAX=0x%016lx RDX=0x%016lx ERR: 0x%lx\n", ctx->int_vector, ctx->int_vector, ctx->cr2, ctx->rip, ctx->rax, ctx->rdx, ctx->err);
+            log.debug("ERR: 0x%lx\n", ctx->err);
+            log.debug("RSP: 0x%lx\n", ctx->rsp);
+            log.debug("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx\n", ctx->cs, ctx->ss, ctx->ds, ctx->es); \
+            log.debug("RFLAGS: 0x%lx\n", ctx->rflags);
         }
+        HCF;
         while (1);
     } else {
         Kernel::DispatchInterrupt(ctx, ctx->int_vector);

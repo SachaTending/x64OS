@@ -118,6 +118,11 @@ void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, p
         fdnum_create_from_resource(thr, console_node->resource, 0, 2, true);
         //thr->cpu_state.regs.rsp += VMM_HIGHER_HALF;
         log.debug("RSP: 0x%016lx\n", thr->cpu_state.regs.rsp);
+        void *heap = malloc(8*1024*1024);
+        uint64_t heap_phys = vmm_virt2phys(krnl_page, (uintptr_t)heap);
+        thr->heap_start = heap_phys;
+        vmm_map_range(thr->pgm, heap_phys, 8*1024*1024, PTE_USER | PTE_WRITABLE | PTE_PRESENT);
+        thr->heap_size = 8*1024*1024;
     }
     // Find latest thread
     thread_t *tmp = root_thread;

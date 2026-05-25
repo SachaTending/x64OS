@@ -13,8 +13,8 @@ bool munmap(struct pagemap *pagemap, uintptr_t addr, size_t length);
 
 void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
            int flags, vfs_node_t *node, size_t offset) {
-    asm volatile("sti");
     Scheduler::Stop();
+    asm volatile("sti");
     struct mmap_range_global *global_range = NULL;
     struct mmap_range_local *local_range = NULL;
 
@@ -37,7 +37,7 @@ void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
     } else {
         //printf("normal mmap\n");
         base = task->mmap_anon_base;
-        log.debug("base: 0x%lx\n", base);
+        log.debug("base: 0x%lx\n", base); 
         task->mmap_anon_base += length + PAGE_SIZE;
     }
     
@@ -49,7 +49,10 @@ void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
 
     global_range->base = base;
     global_range->length = length;
-    global_range->node = node;
+    if (node) {
+        global_range->res = node->resource;
+        log.debug("resource: 0x%016lx\n"), global_range->res;
+    }
     global_range->offset = offset;
 
     local_range = new struct mmap_range_local;
@@ -139,16 +142,27 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
 bool mmap_pf(cpu_ctx *regs) {
     if ((regs->err & 0x1) != 0) {
     //if (false) {
+        log.debug("got PF with PRESENT\n");
+        return false;
+        if (regs->rip < hhdm) {
+            log.debug("mmap_pf: STRANGE, got PRESENT page fault from userspace, gonna handle\n");
+            goto handle_pf;
+        }
+        return false;
         log.debug("mmap_pf: cr2=0x%lx, not our case, gonna handle anyway, err=0x%08x\n", regs->cr2, regs->err);
         log.debug("cs: 0x%02x (ring: %d)\n", regs->cs, regs->cs & 3);
         log.debug("rip: 0x%016lx\n", regs->rip);
         log.debug("is it a kernel pagemap? %d\n", Scheduler::GetCurrentThread()->pgm == krnl_page);
         //return false;
     }
-    log.debug("a\n");
+        if (regs->rip > (uint64_t)Kernel::Main) {
+        log.debug("wtf, got mmap_pf from krnl\n");
+        return false;
+    }
+    handle_pf:
 
     uint64_t cr2 = regs->cr2;
-    log.debug("mmap_pf\n");
+    log.debug("mmap_pf, addr: 0x%016lx, err: 0x%04x\n", cr2, regs->err);
     pagemap *pgm = Scheduler::GetCurrentThread()->pgm;
     log.debug("thread: %d %s\n", Scheduler::GetCurrentThread()->pid, Scheduler::GetCurrentThread()->name);
     spinlock_acquire(&pgm->lock);
@@ -159,6 +173,7 @@ bool mmap_pf(cpu_ctx *regs) {
     spinlock_release(&pgm->lock);
 
     if (local_range == NULL) {
+        log.debug("mmap_pf: addr 0x%016lx not found in local ranges in thread %s(%d), not allocating.\n", cr2, Scheduler::GetCurrentThread()->name, Scheduler::GetCurrentThread()->pid);
         return false;
     }
 
@@ -168,9 +183,12 @@ bool mmap_pf(cpu_ctx *regs) {
         page = pmm_alloc(1);
         log.debug("new page allocated: 0x%lx for addr 0x%lx\n", page, cr2);
     } else {
-        //struct resource *res = local_range->global->res;
-        //page = res->mmap(res, range.file_page, local_range->flags);
-        PANIC("mmaping files is (sadly) not supported.");
+        struct resource *res = local_range->global->res;
+        log.debug("mmap_pf: mmaping res 0x%016lx\n", res);
+        log.debug("res->mmap: 0x%016lx\n", res->mmap);
+        page = res->mmap(res, range.file_page, local_range->flags);
+        log.debug("new file page allocated: 0x%lx for addr 0x%lx\n", page, cr2);
+        //PANIC("mmaping files is (sadly) not supported.");
     }
 
     if (page == NULL) {

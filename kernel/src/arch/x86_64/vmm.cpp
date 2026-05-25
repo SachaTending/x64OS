@@ -47,7 +47,7 @@ extern "C" {
         INVLPG(virt);
         if (pagemap == NULL) return false;
         spinlock_acquire(&(pagemap->lock));
-        flags |= PTE_USER;
+        flags |= PTE_USER | PTE_WRITABLE;
 
         bool ok = false;
         size_t pml4_entry = (virt & (0x1ffull << 39)) >> 39;
@@ -86,7 +86,7 @@ extern "C" {
 
         ok = true;
         //printf("map: ok, ");
-        pml1[pml1_entry] = phys | flags;
+        pml1[pml1_entry] = phys | (flags & ~(1ULL << 63));
 
     cleanup:
         spinlock_release(&pagemap->lock);

@@ -13,7 +13,7 @@ extern "C" int syscall_c_entry(cpu_ctx *ctx) {
     //}
     //asm volatile ("cli");
     //printf("SYSCALL(%d)\n", ctx->rax);
-    ctx->rax = Kernel::HandleSyscall(ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx, ctx->r8, ctx->r9, ctx->r10, ctx);
+    ctx->rax = Kernel::HandleSyscall(ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx, ctx->r9, ctx->r8, ctx->r10, ctx);
     //printf("SYSCALL END, RET=0x%lx\n", ctx->rax);
     vmm_switch_to((pagemap *)Scheduler::GetCurrentThread()->pgm);
     asm volatile ("sti");

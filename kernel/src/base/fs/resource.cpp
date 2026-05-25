@@ -311,3 +311,28 @@ cleanup:
     //DEBUG_SYSCALL_LEAVE("%lld", ret);
     return ret;
 }
+
+ssize_t syscall_pread(int fdnum, void *buf, size_t count, off_t offset) {
+    ssize_t ret = -1;
+
+    thread_t *proc = Scheduler::GetCurrentThread();
+    struct f_description *description;
+    struct resource *res;
+    struct f_descriptor *fd = fd_from_fdnum(proc, fdnum);
+    if (fd == NULL) {
+        goto cleanup;
+    }
+    
+    description = (f_description *) fd->description;
+    res = description->res;
+
+    ret = res->read(res, description, buf, offset, count);
+    if (ret < 0) {
+        ret = -1;
+        goto cleanup;
+    }
+
+cleanup:
+    //DEBUG_SYSCALL_LEAVE("%lld", ret);
+    return ret;
+}

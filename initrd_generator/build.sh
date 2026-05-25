@@ -9,7 +9,9 @@ cd init
 #ld init.o -o init
 gcc -o crt0.o -c crt0.S
 gcc crt0.o main.c -o init libc.a -nostdlib -ffreestanding -static
-cp init ../.tmp/
+if [ ! -f "../.tmp/init" ]; then
+    cp init ../.tmp/
+fi
 cp ld.so ../.tmp/
 cd ..
 

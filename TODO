@@ -1,4 +1,4 @@
 1. Fix mmap_pf
     - something wrong in vmm_map_page
 
-2. Fix programs with linkers not running
+2. Fix programs with musl linker not running

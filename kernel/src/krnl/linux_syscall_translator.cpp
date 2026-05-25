@@ -32,7 +32,7 @@ void *mmap(struct pagemap *pagemap, uintptr_t addr, size_t length, int prot,
 #define MMAP_LINUX_MAP_SYNC       0x80000
 #define MMAP_LINUX_MAP_FIXED_NOREPLACE 0x100000
 #define MMAP_LINUX_MAP_FILE       0
-
+struct f_descriptor *fd_from_fdnum(thread_t *proc, int fdnum);
 uint64_t sys_linux_mmap(
            void *addr, size_t length, int prot, int flags,
            int fd, off_t offset) {
@@ -47,5 +47,11 @@ uint64_t sys_linux_mmap(
     if (flags & MMAP_LINUX_MAP_FIXED) flags2 |= MAP_FIXED;
     if (flags & MMAP_LINUX_MAP_ANONYMOUS) flags2 |= MAP_ANONYMOUS;
     if (flags & MMAP_LINUX_MAP_PRIVATE) flags2 |= MAP_PRIVATE;
-    return (uint64_t)mmap(Scheduler::GetCurrentThread()->pgm, (uint64_t)addr, length, prot2, flags2, 0, offset);
+    if (flags & MMAP_LINUX_MAP_SHARED) flags2 |= MAP_PRIVATE;
+    if (fd == -1) flags2 |= MAP_ANONYMOUS;
+    vfs_node_t *node = 0;
+    if (fd != -1) {
+        node = fd_from_fdnum(Scheduler::GetCurrentThread(), fd)->description->node;
+    }
+    return (uint64_t)mmap(Scheduler::GetCurrentThread()->pgm, (uint64_t)addr, length, prot2, flags2, node, offset);
 }

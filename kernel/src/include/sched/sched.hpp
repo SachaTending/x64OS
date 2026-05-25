@@ -42,6 +42,8 @@ typedef struct thread {
     struct {
         uint64_t set_tid_addr;
     } linux_specific;
+    uint64_t heap_start;
+    uint64_t heap_size;
 } thread_t;
 namespace Scheduler
 {

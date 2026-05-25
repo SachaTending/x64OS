@@ -23,9 +23,11 @@ bool elf_load(struct pagemap *pagemap, struct resource *res, uint64_t load_base,
     }
 
     if (header.e_ident[EI_CLASS] != ELFCLASS64 || header.e_ident[EI_DATA] != ELFDATA2LSB ||
-        header.e_ident[EI_OSABI] != 0 /* ELFOSABI_SYSV */ || header.e_machine != EM_X86_64) {
+        (header.e_ident[EI_OSABI] != 0 && header.e_ident[EI_OSABI] != ELFOSABI_LINUX)  /* ELFOSABI_SYSV */ || header.e_machine != EM_X86_64) {
         //errno = ENOEXEC;
         log.info("Invalid program.\n");
+        log.info("OSABI: %d\n", header.e_ident[EI_OSABI]);
+        log.info("EI_CLASS: %d\n", header.e_ident[EI_CLASS]);
         return false;
     }
 

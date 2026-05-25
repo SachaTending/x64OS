@@ -11,7 +11,7 @@ typedef frg::vector<struct mmap_range_local *, frg::stl_allocator> mmap_ranges_t
 struct mmap_range_global {
     struct pagemap *shadow_pagemap;
     locals_vec_t locals;
-    struct vfs_node *node;
+    struct resource *res;
     uintptr_t base;
     size_t length;
     size_t offset;

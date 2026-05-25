@@ -129,8 +129,8 @@ extern bool p;
 void unpack_initrd();
 void load_lol(resource *res, pagemap *pgm, uint64_t *entry);
 typedef void (*c)();
-#define PRG "/kexec"
-const char *argv[] = {PRG, "/kexec", NULL};
+#define PRG "/ls"
+const char *argv[] = {PRG, ".", NULL};
 const char *envp[] = {"HOME=/", NULL};
 #ifdef CONFIG_SPECIAL_EDITION
 void countdown() {
@@ -214,6 +214,8 @@ void Kernel::Main() {
         bool ret = elf_load(pgm, node->resource, 0x0, &aux, &ld);
         uint64_t prg_entry = aux.at_entry;
         if (ld != 0) {
+            printf("gonna overwrite ld\n");
+            ld = "/lib/ld-linux-x86-64.so.3";
             vfs_node_t *ld_open = VFS::GetNode(vfs_root, ld, true);
             if (ld_open == NULL) {
                 log->error("Failed to load linker %s for %s: File not found\n", ld, PRG);

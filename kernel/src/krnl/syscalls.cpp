@@ -40,7 +40,7 @@ int sys_linux_uname(struct utsname *uname_struct) {
     COPY_STR("x64OS", &uname_struct->sysname);
     COPY_STR("v0.idk", &uname_struct->release);
     COPY_STR("localhost", &uname_struct->nodename);
-    COPY_STR("idk", &uname_struct->version);
+    COPY_STR(full_ver, &uname_struct->version);
     COPY_STR("x86_64", &uname_struct->machine);
     return 0;
 }
@@ -75,11 +75,26 @@ uint64_t sys_linux_mmap(
            void *addr, size_t length, int prot, int flags,
            int fd, off_t offset);
 int syscall_ioctl(int fdnum, uint64_t request, uint64_t arg);
+struct f_descriptor *fd_from_fdnum(thread_t *proc, int fdnum);
+
+int syscall_fstat(int fd, uint64_t st_buf) {
+    printf("fstat(%d, 0x%016x)\n", fd, st_buf);
+    printf("hhdm: 0x%016lx\n", hhdm);
+    struct stat *out = (struct stat *)(0xffff800000000000 + USERSPACE_ADDR_TO_KRNL(st_buf));
+    printf("fstat: out buf: 0x%016lx, hhdm: 0x%016lx\n", out, hhdm);
+    f_descriptor *fdesc = fd_from_fdnum(Scheduler::GetCurrentThread(), fd);
+    printf("f_desc: 0x%016lx\n", fdesc);
+    *out = fdesc->description->res->stat;
+    return 0;
+}
+
+ssize_t syscall_pread(int fdnum, void *buf, size_t count, off_t offset);
+
 uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6, cpu_ctx *ctx) {
     thread_t *thr = Scheduler::GetCurrentThread();
     int ret;
     vmm_switch_to(krnl_page);
-    printf("SYSCALL %d START\n", syscall_num);
+    if (syscall_num != 60 )printf("SYSCALL %d START\n", syscall_num);
     //thr->syscall = SYSCALL_SET_X64OS;
     switch (thr->syscall) {
         case SYSCALL_SET_LINUX:
@@ -87,7 +102,7 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                 case 0:
                     return syscall_read(arg1, (void *)arg2, arg3);
                 case 1:
-                    printf("write(%d, 0x%lx, %d);\n", arg1, arg2, arg3);
+                    //printf("write(%d, 0x%lx, %d);\n", arg1, arg2, arg3);
                     arg2 = USERSPACE_ADDR_TO_KRNL(arg2)+VMM_HIGHER_HALF;
                     if (arg3 == sizeof(MAGIC_TEXT) && !strcmp(MAGIC_TEXT, (const char *)arg2)) {
                         printf("magic: %s\n", arg2);
@@ -97,7 +112,7 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     } else {
                         //printf("write(%d, 0x%lx, %d\n): unknown fd %d\n", arg1, arg2, arg3, arg1);
                         //printf("%s a", arg2);
-                        return syscall_write((int)arg1, (const void *)USERSPACE_ADDR_TO_KRNL(arg2), arg3);
+                        return syscall_write((int)arg1, (const void *)(USERSPACE_ADDR_TO_KRNL(arg2)+hhdm), arg3);
                     }
                     break;
                 case 2:
@@ -108,13 +123,21 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     ret = syscall_openat(AT_FDCWD, (const char *)arg1, arg2, arg3);
                     printf("open(%s, %lu, %lu) ret=%d\n", arg1, arg2, arg3, ret);
                     return ret;
+                case 3:
+                    printf("close?(%d)\n", arg1);
+                    return 0;
+                case 5:
+                    return syscall_fstat(arg1, arg2);
                 case 9:
                     return sys_linux_mmap((void *)arg1, arg2, (int)arg3, (int)arg4, (int)arg5, arg6);
                 case 11:
                     return munmap(thr->pgm, arg1, arg2);
                 case 12:
                     printf("brk(0x%lx)\n", arg1);
-                    return -ENOSYS;
+                    if (arg1 == 0x0) {
+                        return thr->heap_start;
+                    }
+                    return thr->heap_start;
                 case 16:
                     printf("ioctl(?)(%d, %d, 0x%lx)\n", arg1, arg2, arg3);
                     if (arg2 == TIOCGWINSZ) {
@@ -125,8 +148,14 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                         return syscall_ioctl((int)arg1, arg2, arg3);
                     }
                     return 0;
+                case 17:
+                    printf("pread64(%d, 0x%016lx, %lu, %lu)\n", arg1, arg2, arg3, arg4);
+                    return syscall_pread(arg1, arg2, arg3, arg4);
                 case 20:
                     return sys_linux_writev(arg1, (struct iovec2*)arg2, arg3);
+                case 39:
+                    // getpid
+                    return 1;
                 case 60:
                     return 0;
                     // TOOD: Kill
@@ -152,7 +181,9 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     thr->linux_specific.set_tid_addr = arg1;
                     return thr->pid;
                 case 257:
-                    return syscall_openat(arg1, (const char *)arg2, (int)arg3, 777);
+                    ret = syscall_openat(arg1, (const char *)arg2, (int)arg3, 777);
+                    printf("openat(%d, %s, %d): ret=%d\n", arg1, arg2, arg3, ret);
+                    return ret;
                 default:
                     printf("LINUX COMPATIBILITY MODE: Unknown syscall %lu\n", syscall_num);
                     return -ENOSYS;
@@ -175,8 +206,6 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     return syscall_write((int)arg1, (const void *)USERSPACE_ADDR_TO_KRNL(arg2), arg3);
                     //printf("%s a", arg2);
                     break;
-                // TODO: Write
-                // Requirements: /dev/console, devtmpfs
                 case SYS_open:
                     printf("open(%s, %lu, %lu)\n", arg1, arg2, arg3);
                     return syscall_openat(AT_FDCWD, (const char *)arg1, arg2, arg3);
