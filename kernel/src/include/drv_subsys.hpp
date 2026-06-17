@@ -1,0 +1,29 @@
+#pragma once
+#include <drivers/pci.hpp>
+
+#define DRIVER_PCI 1
+
+struct driver {
+    int type;
+    
+    union {
+        struct pci_driver *pci_dev;
+    };
+};
+typedef char symbol[];
+
+extern symbol drivers_start;
+extern symbol drivers_end;
+
+#define EXPORT_PCI_DRIVER(drv) \
+    __attribute__((used, section(".drivers"))) \
+    static struct driver __##drv = { .type = DRIVER_PCI, .pci_dev = &drv }
+
+#define DRIVER_FOR_EACH(TYPE, BINDING, ...) do { \
+    for (struct driver *BINDING = (struct driver *)drivers_start; (uintptr_t)BINDING < (uintptr_t)drivers_end; BINDING++) { \
+        if (BINDING->type != TYPE) { \
+            continue; \
+        } \
+        __VA_ARGS__ \
+    } \
+} while(0)

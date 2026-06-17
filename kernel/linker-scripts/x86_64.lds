@@ -44,6 +44,13 @@ SECTIONS
         *(.rodata .rodata.*)
     } :rodata
 
+    .drivers : {
+        drivers_start = .;
+        KEEP(*(.drivers*))
+        drivers_end = .;
+    } :rodata
+
+
     /* Add a .note.gnu.build-id output section in case a build ID flag is added to the */
     /* linker command. */
     .note.gnu.build-id : {

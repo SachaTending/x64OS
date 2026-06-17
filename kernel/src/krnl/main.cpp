@@ -170,6 +170,7 @@ extern "C" int *__errno_location(void) {
 }
 void fbdev_init();
 void console_init(void);
+void pci_init();
 void Kernel::Main() {
     p = true;
     log->info("Kernel::Main(); started.\n");
@@ -177,13 +178,17 @@ void Kernel::Main() {
     log->info("idk what to put here, but this is a Kernel::Main\n");
    // log->info("Starting countdown...\n");
     //countdown();
+    // Initialize VFS
     VFS::Init();
     VFS::Mount(vfs_root, NULL, "/", "tmpfs");
     VFS::Create(vfs_root, "/dev", 0755 | S_IFDIR);
     VFS::Mount(vfs_root, NULL, "/dev", "devtmpfs");
+    // Populate /dev
     console_init();
     fbdev_init();
+    // Unpack initrd
     unpack_initrd();
+    pci_init();
     vfs_node_t *node;
     #if CONFIG_TEST_VFS=='y'
     log->info("Trying to read file from VFS...\n");
@@ -211,11 +216,13 @@ void Kernel::Main() {
         pagemap *pgm = vmm_new_pagemap();
         auxval aux, ld_auxv;
         const char *ld;
+        // Load init program
         bool ret = elf_load(pgm, node->resource, 0x0, &aux, &ld);
         uint64_t prg_entry = aux.at_entry;
-        if (ld != 0) {
+        if (ld != 0) { // Do we have a linker?
             printf("gonna overwrite ld\n");
             ld = "/lib/ld-linux-x86-64.so.3";
+            // If yes, load it
             vfs_node_t *ld_open = VFS::GetNode(vfs_root, ld, true);
             if (ld_open == NULL) {
                 log->error("Failed to load linker %s for %s: File not found\n", ld, PRG);

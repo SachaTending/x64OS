@@ -82,7 +82,7 @@ override CFLAGS += \
     -D__GIT_HASH=\"$(GIT_HASH)\" \
     -D__BUILD_USER=\"$(BUILD_USER)\" \
     -D__BUILD_HOST=\"$(BUILD_HOST)\" \
-    -D__BUILD_DATE=\"$(BUILD_DATE)\" \
+    -D__BUILD_DATE=\"$(BUILD_DATE)\" -I src/arch/$(ARCH)/include
 
 # Internal C preprocessor flags that should not be changed by the user.
 override CPPFLAGS := \
@@ -94,7 +94,7 @@ override CPPFLAGS := \
     -DLIMINE_API_REVISION=3 \
     -MMD \
     -MP \
-    -I uACPI/include -I frigg/include -fpermissive   -fno-exceptions
+    -I uACPI/include -I frigg/include -fpermissive   -fno-exceptions -I src/arch/$(ARCH)/include
     #    -isystem freestnd-c-hdrs/include \ 
     
 

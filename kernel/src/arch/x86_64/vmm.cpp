@@ -133,7 +133,6 @@ extern "C" {
         }
         uint64_t *pml1 = get_next_level(pml2, pml2_entry, allocate);
         if (pml1 == NULL) {
-            log.debug("pm1 == NULL\n");
             return NULL;
         }
 
@@ -143,7 +142,7 @@ extern "C" {
         uint64_t *pte = vmm_virt2pte(pagemap, virt, false);
         //log.debug("pte: 0x%lx\n", pte);
         if (pte == NULL || (PTE_GET_FLAGS(*pte) & PTE_PRESENT) == 0) {
-            log.debug("%d\n", pte == NULL || (PTE_GET_FLAGS(*pte) & PTE_PRESENT) == 0);
+            //log.debug("%d\n", pte == NULL || (PTE_GET_FLAGS(*pte) & PTE_PRESENT) == 0);
             return INVALID_PHYS;
         }
         //log.debug("0x%lx\n",  PTE_GET_ADDR(*pte));
