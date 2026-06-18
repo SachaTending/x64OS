@@ -4,4 +4,5 @@ obj-y += $(addprefix drivers/, \
 
 obj-y += $(addprefix drivers/storage/, \
 	nvme.cpp \
+	part_parser.cpp \
 )

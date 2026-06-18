@@ -11,7 +11,7 @@
 struct process;
 struct f_description;
 
-struct resource {
+typedef struct resource {
     int res_size;
     int status;
     struct event event;
@@ -29,7 +29,7 @@ struct resource {
     bool (*unref)(struct resource *this2, struct f_description *description);
     bool (*ref)(struct resource *this2, struct f_description *description);
     bool (*truncate)(struct resource *this2, struct f_description *description, size_t length);
-};
+} resource_t;
 
 struct f_description {
     size_t refcount;

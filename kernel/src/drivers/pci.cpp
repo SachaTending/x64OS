@@ -261,7 +261,7 @@ void pci_init() {
     for (int i = 0; i < entries_count; i++) {
         struct mcfg_entry ent = mcfg_base[i];
         mcfg_entries.push_back(ent);
-        vmm_map_range(krnl_page, ent.mmio_base, 4096*8, PTE_PRESENT | PTE_NOCACHE | PTE_WRITABLE);
+        vmm_map_range(krnl_page, ent.mmio_base, 4096*256, PTE_PRESENT | PTE_NOCACHE | PTE_WRITABLE);
         log.info("Found ECAM space for segment %d, bus range %d-%d\n", ent.segment, ent.start, ent.end);
     }
     log.info("Using MCFG as a configuration access mechanism.\n");

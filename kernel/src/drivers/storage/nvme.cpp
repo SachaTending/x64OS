@@ -2,6 +2,9 @@
 #include <logging.hpp>
 #include <fs/resource.h>
 #include <fs/devtmpfs.h>
+#include <drivers/part_parser.hpp>
+
+// This source code was ported from lyre os project
 
 static Logger log("NVME");
 
@@ -417,6 +420,7 @@ static ssize_t nvme_createqueues(struct nvme_device *ctrl, struct nvme_nsdevice 
     }
 
     struct nvme_cmd cmd2;
+    memset(&cmd2, 0, sizeof(nvme_cmd));
     cmd2.createsubq.opcode = NVME_OPCREATESQ;
     cmd2.createsubq.prp1 = (uint64_t)ns->queue.submit - VMM_HIGHER_HALF;
     cmd2.createsubq.sqid = qid;
@@ -569,6 +573,43 @@ static ssize_t nvme_read(struct resource *_this, struct f_description *descripti
     return count;
 }
 
+static ssize_t nvme_write(struct resource *_this, struct f_description *description, const void *buf, off_t loc, size_t count) {
+    (void)description;
+    spinlock_acquire(&_this->lock);
+    struct nvme_nsdevice *thiz = (struct nvme_nsdevice *)_this;
+
+    for (size_t progress = 0; progress < count;) {
+        uint64_t sector = (loc + progress) / thiz->cacheblocksize;
+        int slot = nvme_findblock(thiz, sector);
+        if (slot == -1) {
+            slot = nvme_cacheblock(thiz, sector);
+            if (slot == -1) {
+                spinlock_release(&thiz->lock);
+                return -1;
+            }
+        }
+
+        uint64_t chunk = count - progress;
+        size_t off = (loc + progress) % thiz->cacheblocksize;
+        if (chunk > thiz->cacheblocksize - off) {
+            chunk = thiz->cacheblocksize - off;
+        }
+
+        // copy buffer into cache (for writing)
+        memcpy(&thiz->cache[slot].cache[off], buf + progress, chunk);
+        thiz->cache[slot].status = NVME_READYCACHE; // in usage (allow for cache hits)
+        int ret = nvme_rwlba(thiz, thiz->cache[slot].cache, (thiz->cacheblocksize / thiz->lbasize) * thiz->cache[slot].block, thiz->cacheblocksize / thiz->lbasize, 1);
+        if (ret == -1) {
+            spinlock_release(&thiz->lock);
+            return -1;
+        }
+        progress += chunk;
+    }
+
+    spinlock_release(&thiz->lock);
+    return count;
+}
+
 static void nvme_initnamespace(size_t id, struct nvme_device *controller) {
     struct nvme_nsdevice *nsdev_res = (nvme_nsdevice *)Resource::Create(sizeof(struct nvme_nsdevice));
     nsdev_res->controller = controller;
@@ -598,11 +639,20 @@ static void nvme_initnamespace(size_t id, struct nvme_device *controller) {
     nsdev_res->cacheblocksize = nsdev_res->lbasize * 4; // cache disk blocks in each cache block (less time spent dealing with block reads from disk and overwrites)
     nsdev_res->lbacount = nsid->size;
 
-    log.info("Namespace 1 lba count: %d\n", nsdev_res->lbacount);
-    log.info("Namespace size(in gigabytes): %d\n", (nsdev_res->lbacount * 512) / 1024 / 1024 /1024);
+    log.info("Namespace %d lba count: %d\n", id, nsdev_res->lbacount);
+    log.info("Namespace size(in gigabytes): %d\n", (nsdev_res->lbacount * nsdev_res->lbasize) / 1024 / 1024 /1024);
 
     nsdev_res->can_mmap = false;
     nsdev_res->read = nvme_read;
+    nsdev_res->write = nvme_write;
+    nsdev_res->ioctl = resource_default_ioctl;
+
+    // adding all this size information to stat means we can easily see size information about the block device without anything other than a quick stat
+    nsdev_res->stat.st_size = nsid->size * nsdev_res->lbasize; // total size
+    nsdev_res->stat.st_blocks = nsid->size; // blocks are just part of this
+    nsdev_res->stat.st_blksize = nsdev_res->lbasize; // block sizes are the lba size
+    nsdev_res->stat.st_rdev = resource_create_dev_id();
+    nsdev_res->stat.st_mode = 0666 | S_IFBLK;
 
     char devname[32];
     snprintf(devname, sizeof(devname) - 1, "nvme%lun%lu", nvme_controller_num, id);
@@ -611,6 +661,11 @@ static void nvme_initnamespace(size_t id, struct nvme_device *controller) {
     //char buf[512];
     //nvme_read((resource *)nsdev_res, NULL, buf, 0, 512);
     //log.info("Read from lba 0 result: %s\n", buf);
+    //snprintf(buf+strlen(buf), 512-strlen(buf), "write test from x64os!");
+    //nvme_write((resource *)nsdev_res, NULL, buf, 0, 512);
+    //log.info("Wrote 512 bytes \n");
+
+    partition_enum((struct resource *)nsdev_res, devname, nsdev_res->lbasize, "%sp%u");
 }
 
 static void nvme_initcontroller(struct pci_device *device) {
@@ -622,8 +677,7 @@ static void nvme_initcontroller(struct pci_device *device) {
     }
     log.info("Got BAR0\n");
     if ((PCI_READD(device, 0x10) & 0b111) != 0b100) {
-        log.error("Failed to init controller, something in pci config space is not right.\n");
-        return;
+        log.warn("Something in pci config space is not right.\n");
     }
     if (!pci_map_bar(bar)) {
         log.error("Failed to map BAR0.\n");
