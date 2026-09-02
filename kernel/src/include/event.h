@@ -1,8 +1,7 @@
 #pragma once
 #include <stddef.h>
 #include <spinlock.h>
-#include <sched/sched.hpp>
-
+#include <stdint.h>
 
 #define EVENT_MAX_LISTENERS 32
 
@@ -18,5 +17,5 @@ struct event {
     struct event_listener listeners[EVENT_MAX_LISTENERS];
 };
 
-ssize_t event_await(struct event **events, size_t num_events, bool block);
+size_t event_await(struct event **events, size_t num_events, bool block);
 size_t event_trigger(struct event *event, bool drop);

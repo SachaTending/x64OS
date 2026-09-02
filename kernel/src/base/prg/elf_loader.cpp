@@ -31,6 +31,10 @@ bool elf_load(struct pagemap *pagemap, struct resource *res, uint64_t load_base,
         return false;
     }
 
+    auxv->at_entry = header.e_entry + load_base;
+    auxv->at_phent = header.e_phentsize;
+    auxv->at_phnum = header.e_phnum;
+
     for (size_t i = 0; i < header.e_phnum; i++) {
         Elf64_Phdr phdr;
         if (res->read(res, NULL, &phdr, header.e_phoff + i * header.e_phentsize, sizeof(phdr)) < 0) {
@@ -117,9 +121,6 @@ bool elf_load(struct pagemap *pagemap, struct resource *res, uint64_t load_base,
         }
     }
 
-    auxv->at_entry = header.e_entry + load_base;
-    auxv->at_phent = header.e_phentsize;
-    auxv->at_phnum = header.e_phnum;
     return true;
 
 fail:

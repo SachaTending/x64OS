@@ -24,6 +24,7 @@ extern "C" {
             goto cleanup;
         }
 
+        pagemap->top_level_phys = pagemap->top_level;
         pagemap->top_level = (uint64_t *)((void *)pagemap->top_level + VMM_HIGHER_HALF);
         memset((void *)pagemap->top_level, 0, 4096);
         if (krnl_page != 0) {
@@ -47,7 +48,7 @@ extern "C" {
         INVLPG(virt);
         if (pagemap == NULL) return false;
         spinlock_acquire(&(pagemap->lock));
-        flags |= PTE_USER | PTE_WRITABLE;
+        flags |= PTE_USER;
 
         bool ok = false;
         size_t pml4_entry = (virt & (0x1ffull << 39)) >> 39;
@@ -81,7 +82,7 @@ extern "C" {
         if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
             //if (p) log.error("Entry for addr 0x%lx already present.\n", virt);
             //log.debug("Entry for addr 0x%lx already present.\n", virt);
-            //goto cleanup;
+            goto cleanup;
         }
 
         ok = true;
@@ -176,7 +177,7 @@ extern "C" {
         asm volatile (
             "mov %0, %%cr3"
             :
-            : "r" ((void *)((uint64_t)pagemap->top_level - VMM_HIGHER_HALF))
+            : "r" ((void *)((uint64_t)pagemap->top_level_phys))
             : "memory"
         );
     }

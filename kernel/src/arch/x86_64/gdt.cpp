@@ -153,6 +153,7 @@ void gdt_set_tss(uint64_t tss) {
     //gdt_reload();
     printf("11*8=%d\n", 11*8);
     printf("tss offset: 0x%lx\n", offsetof(struct gdt_desc, tss));
+    printf("tss addr: 0x%016lx\n", tss);
     asm volatile ("ltr %0" : : "rm" ((uint16_t)offsetof(struct gdt_desc, tss)) : "memory");
 }
 
@@ -174,4 +175,5 @@ void gdt_reload(void) {
         : "m"(gdtr)
         : "rax", "memory"
     );
+    printf("gdtr.base=0x%016lx\n", gdtr.base);
 }

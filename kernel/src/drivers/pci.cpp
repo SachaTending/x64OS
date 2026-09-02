@@ -57,7 +57,7 @@ uint32_t mcfg_read(struct pci_device *dev, uint32_t offset, int access_size) {
         }
         return out;
     }
-    log.warn("Failed to find MCFG for device %02x:%02x:%02x\n", dev->bus, dev->seg, dev->slot);
+    log.warn("Failed to find MCFG for device %02x:%02x:%02x\n", dev->bus, dev->slot, dev->func);
     return 0;
 }
 
@@ -94,8 +94,16 @@ static void scan_bus(uint8_t bus) {
         }
     } 
 }
+// Returns true if device exists in pci_devices
+static bool pci_check_if_exists(uint8_t bus, uint8_t slot, uint8_t func) {
+    for (auto dev : pci_devices) {
+        if (dev->bus == bus && dev->slot == slot && dev->func == func) return true;
+    }
+    return false;
+}
 
 static void scan_function(uint8_t bus, uint8_t slot, uint8_t func) {
+    if (pci_check_if_exists(bus, slot, func)) return;
     struct pci_device *dev = new pci_device;
     dev->bus = bus;
     dev->slot = slot;
@@ -119,7 +127,7 @@ static void scan_function(uint8_t bus, uint8_t slot, uint8_t func) {
     if (dev->pci_class == 6 && dev->subclass == 4) {
         // Check if there are more devices hidden behind this bridge
         uint32_t reg_6 = PCI_READD(dev, 6 * sizeof(uint32_t));
-        //scan_bus((reg_6 >> 8) & 0xff);
+        scan_bus((reg_6 >> 8) & 0xff);
     }
 
     uint16_t sreg = PCI_READW(dev, 6);
@@ -269,7 +277,7 @@ void pci_init() {
     pci_write = mcfg_write;
     scan_root_bus();
     dispatch_drivers();
-    while(1);
+    //while(1);
 }
 
 struct pci_bar pci_get_bar(struct pci_device *d, uint8_t index) {

@@ -5,8 +5,11 @@
 #include <krnl.hpp>
 #include <prg_loading.hpp>
 #include <elf.h>
+#include <arch/arch.hpp>
 
 #define STACK_SIZE 128*1024
+
+static struct thread *running_queue[MAX_RUNNING_THREADS];
 
 static Logger log("Scheduler");
 
@@ -29,6 +32,7 @@ int force_openat(int dir_fdnum, const char *path, int flags, int mode, thread_t 
 int fdnum_create_from_resource(thread_t *proc, struct resource *res, int flags,
                                int old_fdnum, bool specific);
 void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, pagemap *pgm, const char **argv, const char **envp, auxval *aux) {
+    log.info("CreateThread(%s, 0x%016lx, %d, 0x%016lx, 0x%016lx, 0x%016lx, 0x%016lx\n)", name, entry, usermode, argv, envp, aux);
     //sched_run++;
     Stop();
     //thread_t *thr = new thread_t;
@@ -42,8 +46,9 @@ void Scheduler::CreateThread(const char *name, void (*entry)(), bool usermode, p
     memset((void *)thr->initial_stack, 0, STACK_SIZE);
     thr->pgm = pgm;
     thr->cwd = vfs_root;
-    if (usermode) vmm_map_range_no_krnl_map(thr->pgm, thr->initial_stack, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
-    else vmm_map_range(thr->pgm, thr->initial_stack, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
+    //if (usermode) vmm_map_range_no_krnl_map(thr->pgm, thr->initial_stack, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
+    //else vmm_map_range(thr->pgm, thr->initial_stack, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
+    vmm_map_range(thr->pgm, thr->initial_stack, STACK_SIZE, PTE_PRESENT | PTE_USER | PTE_WRITABLE);
     Arch::Scheduler::SetupSchedState(&thr->cpu_state, usermode, (uint64_t)entry, thr->initial_stack+STACK_SIZE);
     if (argv != 0) {
         uintptr_t *stack = (uintptr_t *)(thr->initial_stack+STACK_SIZE);
@@ -335,4 +340,71 @@ int syscall_exec_PROTO(const char *path, const char **argv, const char **envp) {
     fail:
     Scheduler::Start();
     return -1;
+}
+
+void Scheduler::Yield(bool save_ctx) {
+    interrupt_toggle(false);
+
+    Arch::StopTimer();
+
+    struct thread *thread = Scheduler::GetCurrentThread();
+
+    //struct cpu_local *cpu = this_cpu();
+
+    if (save_ctx) {
+        spinlock_acquire(&thread->yield_await);
+    } else {
+        //set_gs_base(cpu->idle_thread);
+        //set_kernel_gs_base(cpu->idle_thread);
+    }
+
+    //lapic_send_ipi(cpu->lapic_id, sched_vector);
+    Arch::SendINTViaINTController(TIMER_INTERRUPT);
+
+    interrupt_toggle(true);
+
+    if (save_ctx) {
+        spinlock_acquire(&thread->yield_await);
+        spinlock_release(&thread->yield_await);
+    } else {
+        for (;;) {
+            HALT;
+        }
+    }
+}
+
+bool sched_enqueue_thread(struct thread *thread, bool by_signal) {
+    if (thread->enqueued == true) {
+        return true;
+    }
+
+    thread->enqueued_by_signal = by_signal;
+
+    for (size_t i = 0; i < MAX_RUNNING_THREADS; i++) {
+        if (CAS(&running_queue[i], NULL, thread)) {
+            thread->enqueued = true;
+
+            Arch::SendINTViaINTController(TIMER_INTERRUPT);
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool sched_dequeue_thread(struct thread *thread) {
+    if (!thread->enqueued) {
+        return true;
+    }
+
+    for (size_t i = 0; i < MAX_RUNNING_THREADS; i++) {
+        if (CAS(&running_queue[i], thread, NULL)) {
+            thread->enqueued = false;
+
+            return true;
+        }
+    }
+
+    return false;
 }

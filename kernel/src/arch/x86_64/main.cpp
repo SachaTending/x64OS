@@ -43,13 +43,30 @@ uint64_t smp_bsp_lapic = 0;
 
 extern limine_mp_request smp_request;
 
+void lapic_send_ipi(uint32_t lapic_id, uint32_t vec);
+void lapic_timer_stop(void);
+
+void Arch::StopTimer() {
+    lapic_timer_stop();
+}
+
+void Arch::SendINTViaINTController(uint8_t int_num) {
+    lapic_send_ipi(smp_bsp_lapic, int_num);
+} 
+
 void pmm_on_vmm_enabled();
 void arch_gdt_init();
 void arch_idt_init();
 void arch_tss_setup();
 void arch_setup_syscall();
 void arch_setup_percore_struct();
+
+extern char data_start;
+extern char data_end;
+
 void Arch::InitStage2() {
+    uint64_t data_s_addr = (uint64_t)&data_start;
+    uint64_t data_e_addr = (uint64_t)&data_end;
     // This stage is only called when PMM is initialized
     // TendingStream73: I feel like this should be done by main kernel, not by arch-depended code
     smp_bsp_lapic = smp_request.response->bsp_lapic_id;
@@ -68,6 +85,7 @@ void Arch::InitStage2() {
     }
     //uint64_t _a = (uint64_t)krnl_page->top_level;
     //_a += VMM_HIGHER_HALF;
+    krnl_page->top_level_phys = krnl_page->top_level;
     krnl_page->top_level = (uint64_t *)(((uint64_t)krnl_page->top_level)+VMM_HIGHER_HALF);
     uint64_t kstart = ALIGN_DOWN((uint64_t)&kernel_start, 4096),
         kend = ALIGN_UP((uint64_t)&kernel_end, 4096);
@@ -78,7 +96,10 @@ void Arch::InitStage2() {
     for (uintptr_t addr=kstart;addr<kend;addr+=4096) {
         uint64_t phys = addr - kernel_addr_request.response->virtual_base + kernel_addr_request.response->physical_base;
         log.info("Mapping 0x%016lx\r", addr);
-        vmm_map_page(krnl_page, addr, phys, PTE_WRITABLE | PTE_PRESENT);
+        uint64_t flags = PTE_PRESENT;
+        if (data_s_addr <= addr || data_e_addr >= addr)
+            flags |= PTE_WRITABLE;
+        vmm_map_page(krnl_page, addr, phys, flags);
     }
     putc('\n');
     int prog = 0;

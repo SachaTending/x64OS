@@ -13,7 +13,8 @@ spinlock_t vfs_lock = SPINLOCK_INIT;
 
 struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *parent,
                                  const char *name, bool dir) {
-    struct vfs_node *node = new vfs_node_t;
+    struct vfs_node *node = (vfs_node_t *)malloc(sizeof(vfs_node_t));
+    memset(node, 0, sizeof(vfs_node_t));
     //log.debug("VFS::CreateNode(0x%lx, 0x%lx, \"%s\", %d);\n", fs, parent, name, dir);
     node->name = (char *)strdup(name);
 
@@ -29,13 +30,18 @@ struct vfs_node *VFS::CreateNode(struct vfs_filesystem *fs, struct vfs_node *par
 vfs_node_t *vfs_root;
 
 void vfs_create_dotentries(struct vfs_node *node, struct vfs_node *parent) {
+    return;
+    log.info("create node .\n");
     struct vfs_node *dot = VFS::CreateNode(node->filesystem, node, ".", false);
+    log.info("create node ..\n");
     struct vfs_node *dotdot = VFS::CreateNode(node->filesystem, node, "..", false);
 
     dot->redir = node;
     dotdot->redir = parent;
 
+    log.info("hashmap insert .\n");
     HASHMAP_SINSERT(&node->children, ".", dot);
+    log.info("hashmap insert ..\n");
     HASHMAP_SINSERT(&node->children, "..", dotdot);
 }
 
@@ -52,6 +58,7 @@ void VFS::AddFilesystem(fs_mount_t fs_mount, const char *identifier) {
 }
 void tmpfs_init(void);
 void devtmpfs_init(void);
+void ext2fs_init();
 void VFS::Init(void) {
     log.debug("VFS::Init();\n");
     vfs_root = VFS::CreateNode(NULL, NULL, "", false);
@@ -59,6 +66,7 @@ void VFS::Init(void) {
     filesystems = (typeof(filesystems))HASHMAP_INIT(256);
     tmpfs_init();
     devtmpfs_init();
+    ext2fs_init();
     log.debug("VFS::Init(); done\n");
 }
 struct path2node_res {
@@ -84,7 +92,7 @@ static bool populate(struct vfs_node *node) {
     return true;
 }
 static struct path2node_res path2node(struct vfs_node *parent, const char *path) {
-    //printf("path2node(0x%lx, %s); called\n", parent, path);
+    printf("path2node(0x%lx, %s); called\n", parent, path);
     if (parent == 0) parent = vfs_root;
     if (path == NULL || strlen(path) == 0) {
         errno = ENOENT;
@@ -210,6 +218,7 @@ bool VFS::Mount(struct vfs_node *parent, const char *source, const char *target,
 
     fs_mount_t fs_mount;
     if (!HASHMAP_SGET(&filesystems, fs_mount, fs_name)) {
+        log.error("Mounting %s to %s with fs %s failed: No FS\n", source, target, fs_name);
         errno = ENODEV;
         if (r.basename != NULL) {
             free(r.basename);
@@ -269,8 +278,9 @@ bool VFS::Mount(struct vfs_node *parent, const char *source, const char *target,
         goto cleanup; // failed to mount
     }
     r.target->mountpoint = mount_node;
-
+    //log.info("before create dotentries\n");
     vfs_create_dotentries(mount_node, r.target_parent);
+    //log.info("after\n");
 
     if (source != NULL && strlen(source) != 0) {
         log.info("Mounted `%s` on `%s` with filesystem `%s`\n", source, target, fs_name);

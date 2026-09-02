@@ -215,7 +215,7 @@ extern "C" {
 }
 void init_uacpi();
 void pre_sched_uacpi_init() {
-    void *buf = pmm_alloc(4); // 4 pages(4096*4=13384 bytes=16 kilobytes) should be enough
+    void *buf = pmm_alloc(4); // 4 pages(4096*4=16384 bytes=16 kilobytes) should be enough
     uacpi_setup_early_table_access(buf, 4*PAGE_SIZE);
 }
 

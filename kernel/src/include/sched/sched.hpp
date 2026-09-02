@@ -3,7 +3,8 @@
 #include <arch/vmm.h>
 #include <vfs.hpp>
 #include <spinlock.h>
-
+#include <event.h>
+#define MAX_RUNNING_THREADS 65536
 enum thread_state {
     STATE_NEW, // Thread is just created
     STATE_RUNNING, // Thread is currently running
@@ -25,6 +26,7 @@ enum syscall_set {
     SYSCALL_SET_X64OS
 };
 #define MAX_FDS 256
+#define MAX_EVENTS 32
 typedef struct thread {
     arch_specific_cpu_state_t cpu_state;
     const char *name;
@@ -44,6 +46,13 @@ typedef struct thread {
     } linux_specific;
     uint64_t heap_start;
     uint64_t heap_size;
+
+    spinlock_t yield_await;
+    bool enqueued;
+    bool enqueued_by_signal;
+    size_t which_event;
+    size_t attached_events_i;
+    struct event *attached_events[MAX_EVENTS];
 } thread_t;
 namespace Scheduler
 {
@@ -52,4 +61,5 @@ namespace Scheduler
     void Start();
     void Stop();
     thread_t *GetCurrentThread();
+    void Yield(bool save_ctx);
 } // namespace Scheduler

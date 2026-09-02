@@ -24,6 +24,6 @@ void arch_tss_setup() {
     for (int i=0;i<7;i++) {
         entry->ist[i] = (uint64_t)malloc(128*1024)+(128*1024);
     }
-    gdt_set_tss((uint64_t)orig_addr);
+    gdt_set_tss((uint64_t)entry);
     idt_set_global_ist(1);
 }

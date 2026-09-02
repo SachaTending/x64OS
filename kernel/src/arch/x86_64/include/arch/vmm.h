@@ -13,6 +13,8 @@ struct pagemap {
     spinlock_t lock;
     uint64_t *top_level;
     mmap_ranges_t mmap_ranges;
+
+    uint64_t top_level_phys;
 };
 
 #ifdef __cplusplus

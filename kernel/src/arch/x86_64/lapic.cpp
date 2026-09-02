@@ -93,6 +93,11 @@ void lapic_timer_calibrate(void) {
     lapic_timer_stop();
 }
 
+void lapic_send_ipi(uint32_t lapic_id, uint32_t vec) {
+    lapic_write(LAPIC_REG_ICR1, lapic_id << 24);
+    lapic_write(LAPIC_REG_ICR0, vec);
+}
+
 void Arch::x86::ACPI::LAPICSetup(){
     //wrmsr(IA32_APIC_BASE_MSR, (rdmsr(IA32_APIC_BASE_MSR) & 0xfffff0000) | IA32_APIC_BASE_MSR_ENABLE);
     log.debug("LAPIC base: 0x%lx\n",lapic_base);

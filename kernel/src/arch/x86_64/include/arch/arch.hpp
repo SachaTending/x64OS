@@ -9,6 +9,8 @@ namespace Arch
     void InitStage2();
     void InitACPI(); // SHOULD BE CALLED AFTER UACPI INI
     void InitTImer();
+    void StopTimer();
+    void SendINTViaINTController(uint8_t int_num);
     namespace x86
     {
         void InitPIC();
@@ -19,6 +21,7 @@ namespace Arch
         } // namespace ACPI
         
     } // namespace x86
+    void StackTrace();
 } // namespace Arch
 
 struct description_table_header
@@ -80,3 +83,30 @@ extern madt_io_apic_irq_map_vec_t madt_io_apic_irq_map_vec;
 #define START_INTERRUPTS ASM ("sti")
 
 #define HCF STOP_INTERRUPTS; ASM ("1: hlt; jmp 1") // aka halt and catch fire
+
+#define HALT ASM ("hlt")
+
+
+static inline bool interrupt_state(void) {
+    uint64_t flags;
+    asm volatile ("pushfq; pop %0" : "=rm"(flags) :: "memory");
+    return flags & (1 << 9);
+}
+
+static inline void enable_interrupts(void) {
+    asm ("sti");
+}
+
+static inline void disable_interrupts(void) {
+    asm ("cli");
+}
+
+static inline bool interrupt_toggle(bool state) {
+    bool ret = interrupt_state();
+    if (state) {
+        enable_interrupts();
+    } else {
+        disable_interrupts();
+    }
+    return ret;
+}

@@ -6,6 +6,7 @@
 #include <arch/vmm.h>
 //#include <vmm.h>
 #include <config.h>
+#include <krnl.hpp>
 
 static Logger log("PMM(From lyre os)");
 
@@ -327,7 +328,11 @@ static void *alloc_from_slab(struct slab *slab) {
     //if ((uintptr_t)slab->first_free < VMM_HIGHER_HALF) vmm_map_page(krnl_page, (uintptr_t)slab->first_free, (uintptr_t)slab->first_free, PTE_WRITABLE | PTE_PRESENT);
 
     void **old_free = slab->first_free;
+    if (((uintptr_t)old_free) < VMM_HIGHER_HALF) {
+        PANIC("Abnormal old_free address: 0x%016lx. Did it got corrupted? Slab address: 0x%016lx\n", old_free, slab);
+    }
 
+    //log.debug("old_free: 0x%016lx\n", old_free);
     slab->first_free = (void **)*old_free;
     memset(old_free, 0, slab->ent_size);
 

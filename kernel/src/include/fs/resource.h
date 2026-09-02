@@ -51,6 +51,7 @@ namespace Resource
     void *Create(size_t size);
 } // namespace Resource
 
+#define CREATE_RESOURCE(t) (t *) Resource::Create(sizeof(t))
 
 #define FILE_CREATION_FLAGS_MASK (O_CREAT | O_DIRECTORY | O_EXCL | O_NOCTTY | O_NOFOLLOW | O_TRUNC)
 #define FILE_DESCRIPTOR_FLAGS_MASK (O_CLOEXEC)

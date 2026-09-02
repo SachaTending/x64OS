@@ -13,6 +13,7 @@
 #include <arch/arch.hpp>
 #include <config.h>
 #include <rng.hpp>
+#include <net/net.hpp>
 
 #ifdef CONFIG_SPECIAL_EDITION
 #define CURRENT_YEAR        2025                            // Change this each year!
@@ -129,8 +130,8 @@ extern bool p;
 void unpack_initrd();
 void load_lol(resource *res, pagemap *pgm, uint64_t *entry);
 typedef void (*c)();
-#define PRG "/ls"
-const char *argv[] = {PRG, ".", NULL};
+#define PRG "/busybox.static"
+const char *argv[] = {PRG, "ifconfig", NULL};
 const char *envp[] = {"HOME=/", NULL};
 #ifdef CONFIG_SPECIAL_EDITION
 void countdown() {
@@ -171,6 +172,9 @@ extern "C" int *__errno_location(void) {
 void fbdev_init();
 void console_init(void);
 void pci_init();
+
+#define CONFIG_TEST_PRINT_MNT_DIR 'n'
+
 void Kernel::Main() {
     p = true;
     log->info("Kernel::Main(); started.\n");
@@ -188,8 +192,55 @@ void Kernel::Main() {
     fbdev_init();
     // Unpack initrd
     unpack_initrd();
+    Net::Init();
     pci_init();
+
+    VFS::Create(vfs_root, "/mnt", 0755 | S_IFDIR);
+    VFS::Mount(vfs_root, "/dev/nvme0n1p1", "/mnt", "ext2fs");
+    
     vfs_node_t *node;
+    #if CONFIG_TEST_PRINT_MNT_DIR=='y'
+    node = VFS::GetNode(vfs_root, "/mnt", false);
+    vfs_node_t *mnt_node = node;
+    log->debug("node: 0x%016lx\n", node);
+    log->info("Files in /mnt:\n");
+    log->info("/mnt/\n");
+    for (int i=0;i<node->children.cap;i++) {
+        typeof(&node->children.buckets[i]) bucket = &node->children.buckets[i];
+        for (size_t j = 0; j < bucket->filled; j++) {
+            log->debug("bucket: 0x%lx\n", bucket);
+            struct vfs_node *child = bucket->items[j].item;
+            log->info("     %s", child->name);
+            if (S_ISDIR(child->resource->stat.st_mode)) {
+                printf("\tDIR\n");
+            }
+            if (S_ISREG(child->resource->stat.st_mode)) {
+                printf("\tFILE\n");
+            }
+        }
+    }
+    log->info("Contents of /mnt/test_file.txt:\n");
+    node = VFS::GetNode(mnt_node, "test_file.txt", true);
+    if (node) {
+    char buf[512];
+    node->resource->read(node->resource, NULL, buf, 0, 512);
+    log->info("%s\n", buf);
+    }
+    node = VFS::GetNode(mnt_node, "tcc", true);
+    if (node){
+        pagemap *pgm = vmm_new_pagemap();
+        auxval aux, ld_auxv;
+        const char *ld;
+        // Load program
+        bool ret = elf_load(pgm, node->resource, 0x0, &aux, &ld);
+        uint64_t prg_entry = aux.at_entry;
+        Scheduler::Stop();
+        log->info("pgm: 0x%016lx\n", pgm);
+        Scheduler::CreateThread(PRG, (void (*)())prg_entry, true, pgm, argv, envp, &aux);
+        Scheduler::Start();
+    }
+    #endif
+    //for(;;);
     #if CONFIG_TEST_VFS=='y'
     log->info("Trying to read file from VFS...\n");
     node = VFS::GetNode(vfs_root, "/hi.txt", true);
@@ -208,13 +259,14 @@ void Kernel::Main() {
     #endif
     //log->info("Легро, где арты?\n");
     //#define PRG "/linux_compat_layer_test"
-    log->info("gonna launch busybox fbset\n");
+    log->info("gonna launch %s fbset\n", PRG);
     node = VFS::GetNode(vfs_root, PRG, true);
     log->info("node 0x%lx\n", node);
     if (node && 1) {
         //log->info("node 0x%lx opened\n", node);
         pagemap *pgm = vmm_new_pagemap();
         auxval aux, ld_auxv;
+        memset(&aux, 0, sizeof(auxval));
         const char *ld;
         // Load init program
         bool ret = elf_load(pgm, node->resource, 0x0, &aux, &ld);
@@ -240,15 +292,15 @@ void Kernel::Main() {
             log->error("Failed to load %s as elf program.\n", PRG);
             PANIC("Failed to start %s as init program.\n", PRG);
         }
-        log->info("%s info:\n", PRG);
-        log->info("entry: 0x%lx\n", prg_entry);
-        if (ld) {
-            log->info("interpreter: %s\n", ld);
-        } else {
-            log->info("No interpreter.\n");
-        }
         Scheduler::Stop();
-        log->info("pgm: 0x%016lx\n", pgm);
+        log->debug("%s info:\n", PRG);
+        log->debug("entry: 0x%lx\n", prg_entry);
+        if (ld) {
+            log->debug("interpreter: %s\n", ld);
+        } else {
+            log->debug("No interpreter.\n");
+        }
+        log->debug("pgm: 0x%016lx\n", pgm);
         Scheduler::CreateThread(PRG, (void (*)())prg_entry, true, pgm, argv, envp, &aux);
         Scheduler::Start();
     } else {
@@ -272,7 +324,7 @@ __attribute__((noreturn)) void panic(const char *file, size_t lnum, const char *
     va_start(lst, msg);
     vprintf(msg, lst);
     va_end(lst);
-    putchar_('\n');
+    Arch::StackTrace();
     //stacktrace(0);
     printf("\nSystem halted.\n");
     HCF;

@@ -9,6 +9,7 @@ obj-y += $(addprefix base/, \
 	sched.cpp \
 	rng.cpp \
 	version.cpp \
+	event.cpp \
 )
 
 # IO
@@ -35,6 +36,7 @@ obj-y += $(addprefix base/fs/, \
 	tmpfs.cpp \
 	resource.cpp \
 	initrd_unpacker.cpp \
+	ext2fs.cpp \
 )
 
 # devtmpfs and related stuff
@@ -47,4 +49,9 @@ obj-y += $(addprefix base/fs/dev/, \
 obj-y += $(addprefix base/prg/, \
 	lol_loader.cpp \
 	elf_loader.cpp \
+)
+
+# Network
+obj-y += $(addprefix base/net/, \
+	net.cpp \
 )

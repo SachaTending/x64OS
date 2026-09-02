@@ -60,6 +60,7 @@ SECTIONS
     /* Move to the next memory page for .data */
     . = ALIGN(CONSTANT(MAXPAGESIZE));
 
+    data_start = .;
     .data : {
         start_ctors = .;
         KEEP(*( .ctors ));
@@ -68,6 +69,7 @@ SECTIONS
         end_ctors = .;
         *(.data .data.*)
     } :data
+    data_end = .;
 
     /* NOTE: .bss needs to be the last thing mapped to :data, otherwise lots of */
     /* unnecessary zeros will be written to the binary. */

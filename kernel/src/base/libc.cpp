@@ -66,6 +66,20 @@ extern "C" {
             dst[i] = src[i];
         }
     }
+
+    char *strncpy(char *dest, const char *src, size_t n) {
+        size_t i;
+
+        for (i = 0; i < n && src[i]; i++) {
+            dest[i] = src[i];
+        }
+        for ( ; i < n; i++) {
+            dest[i] = 0;
+        }
+
+        return dest;
+    }
+
     const char *strdup(const char *in) {
         size_t l = strlen(in)+1;
         const char *s = (const char *)malloc(l);
