@@ -21,7 +21,7 @@ struct pagemap {
 extern "C" {
 #endif
 extern pagemap *krnl_page;
-bool vmm_map_page(struct pagemap *pagemap, uintptr_t virt, uintptr_t phys, uint64_t flags);
+bool vmm_map_page(struct pagemap *pagemap, uintptr_t virt, uintptr_t phys, uint64_t flags, bool overwrite=false);
 
 void vmm_switch_to(struct pagemap *pagemap);
 

@@ -89,10 +89,10 @@ int syscall_fstat(int fd, uint64_t st_buf) {
 }
 
 ssize_t syscall_pread(int fdnum, void *buf, size_t count, off_t offset);
-
+int syscall_socket(struct thread *caller, int family, int type, int protocol);
 uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6, cpu_ctx *ctx) {
     thread_t *thr = Scheduler::GetCurrentThread();
-    int ret;
+    uint64_t ret;
     vmm_switch_to(krnl_page);
     if (syscall_num != 60 )printf("SYSCALL %d START\n", syscall_num);
     //thr->syscall = SYSCALL_SET_X64OS;
@@ -141,6 +141,7 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                 case 16:
                     printf("ioctl(?)(%d, %d, 0x%lx)\n", arg1, arg2, arg3);
                     if (arg2 == TIOCGWINSZ) {
+                        printf("handling as TIOCGWINSZ\n");
                         struct winsize *size = (winsize *)arg3;
                         size->ws_col = 100;
                         size->ws_row = 100;
@@ -155,7 +156,10 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     return sys_linux_writev(arg1, (struct iovec2*)arg2, arg3);
                 case 39:
                     // getpid
-                    return 1;
+                    return thr->pid;
+                case 41:
+                    // socket
+                    return syscall_socket(thr, arg1, arg2, arg3);
                 case 60:
                     return 0;
                     // TOOD: Kill
@@ -216,7 +220,9 @@ uint64_t Kernel::HandleSyscall(uint64_t syscall_num, uint64_t arg1, uint64_t arg
                     return 0;
                 case SYS_mmap:
                     printf("mmap(addr=0x%lx, length=%lu) offs: 0x%lx\n", arg1, arg2, arg4);
-                    return (uint64_t)mmap(Scheduler::GetCurrentThread()->pgm, arg1, arg2, (int)(arg3 >> 32), (int)arg3, 0, arg4);
+                    ret = (uint64_t)mmap(Scheduler::GetCurrentThread()->pgm, arg1, arg2, (int)(arg3 >> 32), (int)arg3, 0, arg4);
+                    vmm_switch_to(thr->pgm);
+                    return ret;
                 case SYS_exec:
                     ret = syscall_exec_PROTO((const char *)vmm_virt2phys(thr->pgm, arg1)+VMM_HIGHER_HALF, (const char**)arg2, (const char**)arg3);
                     if (ret == 0) {

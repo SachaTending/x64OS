@@ -117,7 +117,7 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
     }
     //log.debug("pt_flags: %d\n", pt_flags);
 
-    if (!vmm_map_page(global->shadow_pagemap, virt, phys, pt_flags)) {
+    if (!vmm_map_page(global->shadow_pagemap, virt, phys, pt_flags, true)) {
         log.error("Failed to vmm_map_page\n");
         return false;
     }
@@ -130,7 +130,7 @@ bool mmap_page_in_range(struct mmap_range_global *global, uintptr_t virt,
         }
         //log.debug("selected pagemap: base: 0x%016lx, length: %d\n", local_range->base, local_range->length);
         //log.debug("pagemap: 0x%lx\n", local_range->pagemap);
-        if (!vmm_map_page(local_range->pagemap, virt, phys, pt_flags)) {
+        if (!vmm_map_page(local_range->pagemap, virt, phys, pt_flags, true)) {
             //log.debug("page mapped.\n");
             return false;
         }

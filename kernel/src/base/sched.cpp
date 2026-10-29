@@ -373,7 +373,7 @@ void Scheduler::Yield(bool save_ctx) {
     }
 }
 
-bool sched_enqueue_thread(struct thread *thread, bool by_signal) {
+bool Scheduler::Enqueue(struct thread *thread, bool by_signal) {
     if (thread->enqueued == true) {
         return true;
     }
@@ -393,7 +393,7 @@ bool sched_enqueue_thread(struct thread *thread, bool by_signal) {
     return false;
 }
 
-bool sched_dequeue_thread(struct thread *thread) {
+bool Scheduler::Dequeue(struct thread *thread) {
     if (!thread->enqueued) {
         return true;
     }

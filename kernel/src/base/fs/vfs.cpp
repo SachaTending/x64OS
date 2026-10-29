@@ -453,7 +453,7 @@ bool vfs_fdnum_path_to_node(int dir_fdnum, const char *path, bool empty_path, bo
             free(res.basename);
         }
     }
-    log.debug("vfs_fdnum_path_to_node: ret: parent=0x%lx, node=0x%lx, basename=0x%lx\n", *parent, *node, *basename);
+    //log.debug("vfs_fdnum_path_to_node: ret: parent=0x%lx, node=0x%lx, basename=0x%lx\n", *parent, *node, *basename);
 
     return true;
 }

@@ -15,6 +15,12 @@ obj-y += $(addprefix base/, \
 # IO
 obj-y += $(addprefix base/io/, \
 	text.cpp \
+	socket.cpp \
+)
+
+# Socket stuff
+obj-y += $(addprefix base/io/socket/, \
+	udp.cpp \
 )
 
 # Flanterm

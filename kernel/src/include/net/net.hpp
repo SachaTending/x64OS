@@ -12,6 +12,9 @@
 #define NET_PORTRANGESTART 49152
 #define NET_PORTRANGEEND UINT16_MAX
 
+typedef uint16_t be_uint16_t;
+typedef uint32_t be_uint32_t;
+
 struct net_inetaddr {
     union {
         struct {
@@ -90,6 +93,7 @@ struct net_adapter : resource {
 namespace Net
 {
     void Init();
+    void BindSocket(struct net_adapter *adapter, struct socket *sock);
     void Register(struct net_adapter *adapter);
 } // namespace Net
 

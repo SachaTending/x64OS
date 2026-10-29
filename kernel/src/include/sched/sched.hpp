@@ -62,4 +62,6 @@ namespace Scheduler
     void Stop();
     thread_t *GetCurrentThread();
     void Yield(bool save_ctx);
+    bool Enqueue(struct thread *thread, bool by_signal);
+    bool Dequeue(struct thread *thread);
 } // namespace Scheduler

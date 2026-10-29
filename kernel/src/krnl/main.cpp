@@ -130,9 +130,9 @@ extern bool p;
 void unpack_initrd();
 void load_lol(resource *res, pagemap *pgm, uint64_t *entry);
 typedef void (*c)();
-#define PRG "/busybox.static"
+#define PRG "/main"
 const char *argv[] = {PRG, "ifconfig", NULL};
-const char *envp[] = {"HOME=/", NULL};
+const char *envp[] = {"HOME=/", "MLIBC_RTLD_DEBUG_VERBOSE=1", "MLIBC_RTLD_DEBUG=1", NULL};
 #ifdef CONFIG_SPECIAL_EDITION
 void countdown() {
     asm volatile ("cli");
@@ -270,10 +270,12 @@ void Kernel::Main() {
         const char *ld;
         // Load init program
         bool ret = elf_load(pgm, node->resource, 0x0, &aux, &ld);
+        log->debug("elf_load done\n");
         uint64_t prg_entry = aux.at_entry;
         if (ld != 0) { // Do we have a linker?
             printf("gonna overwrite ld\n");
-            ld = "/lib/ld-linux-x86-64.so.3";
+            // ld = "/lib/ld-linux-x86-64.so.3";
+            ld = "/ld.so";
             // If yes, load it
             vfs_node_t *ld_open = VFS::GetNode(vfs_root, ld, true);
             if (ld_open == NULL) {

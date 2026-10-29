@@ -5,6 +5,7 @@
 #include <arch/arch.hpp>
 #include <linux/sockios.h>
 #include <errno.h>
+#include <netinet/in.h>
 
 static Logger log("Network");
 
@@ -60,9 +61,17 @@ void ifhandler_thread() {
     }
 }
 
+void Net::BindSocket(struct net_adapter *adapter, struct socket *sock) {
+    spinlock_acquire(&adapter->socklock);
 
+   // ((struct inetsocket *)sock)->adapter = adapter;
+   // adapter->boundsocks.push(sock);
+
+    spinlock_release(&adapter->socklock);
+}
 
 int net_ifioctl(struct resource *_this, struct f_description *description, uint64_t request, uint64_t arg) {
+    log.debug("net ioctl\n");
     struct ifreq *req = (struct ifreq *)arg;
     if (req->ifr_ifru.ifru_ivalue) {
         if (request == SIOCGIFNAME) { // this one relies on the index instead of the name
@@ -90,6 +99,7 @@ int net_ifioctl(struct resource *_this, struct f_description *description, uint6
             for (auto net_adapt : net_adapters) {
                 if (!strncmp(net_adapt->ifname, req->ifr_ifrn.ifrn_name, IFNAMSIZ)) {
                     thiz = net_adapt;
+                    log.debug("found adapter %s\n", net_adapt->ifname);
                 }
             };
 
@@ -111,6 +121,16 @@ int net_ifioctl(struct resource *_this, struct f_description *description, uint6
     }
 
     switch (request) {
+        case SIOCSIFADDR: {
+            struct sockaddr_in *inaddr = (struct sockaddr_in *)&req->ifr_addr;
+            if (inaddr->sin_family != AF_INET) {
+                return -EPROTONOSUPPORT;
+            }
+
+            thiz->ip.value = inaddr->sin_addr.s_addr;
+            log.debug("set ip to %lu\n", thiz->ip.value);
+            return 0;
+        }
         /*
         case SIOCGIFGATEWAY: { // XXX: Make a gateway ioctl
             struct sockaddr_in *inaddr = (struct sockaddr_in *)&req->ifr_addr;
@@ -211,6 +231,8 @@ int net_ifioctl(struct resource *_this, struct f_description *description, uint6
             return 0;
         }
         */
+        default:
+            log.warn("Unknown IOCTL: %d\n", request);
     }
 
     return resource_default_ioctl(_this, description, request, arg);

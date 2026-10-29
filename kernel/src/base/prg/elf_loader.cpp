@@ -44,7 +44,7 @@ bool elf_load(struct pagemap *pagemap, struct resource *res, uint64_t load_base,
 
         switch (phdr.p_type) {
             case PT_TLS:
-                log.info("PT_TLS 0x%lx, size: %lu, offs: 0x%lx\n", phdr.p_vaddr, phdr.p_memsz, phdr.p_offset);
+                //log.info("PT_TLS 0x%lx, size: %lu, offs: 0x%lx\n", phdr.p_vaddr, phdr.p_memsz, phdr.p_offset);
                 break;
             case PT_LOAD: {
                 int prot = PROT_READ;

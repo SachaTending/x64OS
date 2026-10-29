@@ -88,9 +88,8 @@ extern "C" cpu_ctx *idt_main_handler(cpu_ctx *ctx) {
             ctx->rflags &= ~((1UL << 8) | (1UL << 14) | (1UL << 17));
             return ctx;
         } else {
-            log.error("Vector: 0x%lx(%lu) CR2=0x%016lx RIP=0x%016lx RAX=0x%016lx RDX=0x%016lx ERR: 0x%lx\n", ctx->int_vector, ctx->int_vector, ctx->cr2, ctx->rip, ctx->rax, ctx->rdx, ctx->err);
-             HCF;
-        while (1);
+            log.error("Vector: 0x%lx(%lu) CR2=0x%016lx RIP=0x%016lx RAX=0x%016lx RDX=0x%016lx ERR: 0x%lx RBX=0x%016lx\n", ctx->int_vector, ctx->int_vector, ctx->cr2, ctx->rip, ctx->rax, ctx->rdx, ctx->err, ctx->rbx);
+            HCF;
             log.error("ERR: 0x%lx\n", ctx->err);
             log.error("RSP: 0x%lx\n", ctx->rsp);
             log.error("CS: 0x%lx SS: 0x%lx DS: 0x%lx ES: 0x%lx\n", ctx->cs, ctx->ss, ctx->ds, ctx->es); \

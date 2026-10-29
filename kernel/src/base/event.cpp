@@ -87,7 +87,7 @@ size_t event_await(struct event **events, size_t num_events, bool block) {
     }
 
     attach_listeners(events, num_events, thread);
-    //sched_dequeue_thread(thread);
+    Scheduler::Dequeue(thread);
     unlock_events(events, num_events);
     Scheduler::Yield(true);
 
@@ -129,7 +129,7 @@ size_t event_trigger(struct event *event, bool drop) {
         struct thread *thread = listener->thread;
 
         thread->which_event = listener->which;
-        //sched_enqueue_thread(thread, false);
+        Scheduler::Enqueue(thread, false);
     }
 
     ret = event->listeners_i;

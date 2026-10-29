@@ -2,32 +2,32 @@
 
 .macro THUNK
     swapgs
-    mov %rsp, %gs:16
-    mov %gs:0, %rsp
+    //mov %rsp, %gs:16
+    //mov %gs:0, %rsp
 
-    push %r15
-    push %r14
-    push %r13
-    push %r12
-    push %r11
-    push %r10
-    push %r9
-    push %r8
-    push %rbp
-    push %rdi
-    push %rsi
-    push %rdx
-    push %rcx
-    push %rbx
-    push %rax
+    pushq %r15
+    pushq %r14
+    pushq %r13
+    pushq %r12
+    pushq %r11
+    pushq %r10
+    pushq %r9
+    pushq %r8
+    pushq %rbp
+    pushq %rdi
+    pushq %rsi
+    pushq %rdx
+    pushq %rcx
+    pushq %rbx
+    pushq %rax
 
     mov %es, %eax
-    push %rax
+    pushq %rax
     mov %ds, %eax
-    push %rax
+    pushq %rax
 
     mov %cr2, %rax
-    push %rax
+    pushq %rax
 
     cld
 
@@ -49,28 +49,28 @@
     cli
 
     add $8, %rsp
-    pop %rax
+    popq %rax
     mov %eax, %ds
-    pop %rax
+    popq %rax
     mov %eax, %es
 
-    pop %rax
-    pop %rbx
-    pop %rcx
-    pop %rdx
-    pop %rsi
-    pop %rdi
-    pop %rbp
-    pop %r8
-    pop %r9
-    pop %r10
-    pop %r11
-    pop %r12
-    pop %r13
-    pop %r14
-    pop %r15
+    popq %rax
+    popq %rbx
+    popq %rcx
+    popq %rdx
+    popq %rsi
+    popq %rdi
+    popq %rbp
+    popq %r8
+    popq %r9
+    popq %r10
+    popq %r11
+    popq %r12
+    popq %r13
+    popq %r14
+    popq %r15
 
-    mov %gs:16, %rsp
+    //mov %gs:16, %rsp
     swapgs
 .endm
 
@@ -78,7 +78,8 @@
 syscall_entry:
     pushq $0x53 // SS
 	pushq %rsp // RSP
-	pushfq // flag
+	//pushfq // flag
+    push %r11
 	pushq $0
 	pushq %rcx // RIP
 	pushq $0
@@ -89,7 +90,8 @@ syscall_entry:
     add $16, %rsp
     popq %rcx
 	add $8, %rsp
-	popfq // flags
+	//popfq // flags
+    pop %r11
 	add $16, %rsp
 
     sti

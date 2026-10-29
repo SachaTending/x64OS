@@ -44,7 +44,7 @@ extern "C" {
         return NULL;
     }
 
-    bool vmm_map_page(struct pagemap *pagemap, uintptr_t virt, uintptr_t phys, uint64_t flags) {
+    bool vmm_map_page(struct pagemap *pagemap, uintptr_t virt, uintptr_t phys, uint64_t flags, bool overwrite) {
         INVLPG(virt);
         if (pagemap == NULL) return false;
         spinlock_acquire(&(pagemap->lock));
@@ -82,7 +82,7 @@ extern "C" {
         if ((pml1[pml1_entry] & PTE_PRESENT) != 0) {
             //if (p) log.error("Entry for addr 0x%lx already present.\n", virt);
             //log.debug("Entry for addr 0x%lx already present.\n", virt);
-            goto cleanup;
+            if (overwrite == false) goto cleanup;
         }
 
         ok = true;

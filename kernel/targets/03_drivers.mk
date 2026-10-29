@@ -13,4 +13,5 @@ obj-y += $(addprefix drivers/usb/, \
 
 obj-y += $(addprefix drivers/net/, \
 	loopback.cpp \
+	e1000.cpp \
 )

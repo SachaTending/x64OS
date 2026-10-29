@@ -11,12 +11,14 @@ extern "C" int syscall_c_entry(cpu_ctx *ctx) {
     //} else {
     //    printf("wtf is syscall %d(0x%lx)\n", ctx->rax, ctx->rax);
     //}
-    //asm volatile ("cli");
+    asm volatile ("cli");
     //printf("SYSCALL(%d)\n", ctx->rax);
+    int sys_num = ctx->rax;
     ctx->rax = Kernel::HandleSyscall(ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx, ctx->r9, ctx->r8, ctx->r10, ctx);
+    printf("SYSCALL %d END\n", sys_num);
     //printf("SYSCALL END, RET=0x%lx\n", ctx->rax);
     vmm_switch_to((pagemap *)Scheduler::GetCurrentThread()->pgm);
-    asm volatile ("sti");
+    //asm volatile ("sti");
     return 0;
 }
 extern "C" void syscall_entry();

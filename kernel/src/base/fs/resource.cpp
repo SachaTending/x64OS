@@ -6,6 +6,8 @@ int resource_default_ioctl(struct resource *this2, struct f_description *descrip
     (void)description;
     (void)arg;
 
+    printf("ioctl was called on STUB, request: 0x%lx\n", request);
+
     //switch (request) {
     //    case TCGETS:
     //    case TCSETS:
@@ -270,12 +272,14 @@ int syscall_ioctl(int fdnum, uint64_t request, uint64_t arg) {
 
     struct f_descriptor *fd = fd_from_fdnum(proc, fdnum);
     if (fd == NULL) {
+        printf("ioctl: unknown fd %d\n", fdnum);
         goto cleanup;
     }
 
     description = fd->description;
     res = description->res;
     ret = res->ioctl(res, description, request, arg);
+    printf("ioctl: ioctl for fd %d was called\n", fdnum);
 
 cleanup:
     //DEBUG_SYSCALL_LEAVE("%d", ret);
