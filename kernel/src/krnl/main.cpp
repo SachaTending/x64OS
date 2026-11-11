@@ -130,7 +130,7 @@ extern bool p;
 void unpack_initrd();
 void load_lol(resource *res, pagemap *pgm, uint64_t *entry);
 typedef void (*c)();
-#define PRG "/main"
+#define PRG "/init2"
 const char *argv[] = {PRG, "ifconfig", NULL};
 const char *envp[] = {"HOME=/", "MLIBC_RTLD_DEBUG_VERBOSE=1", "MLIBC_RTLD_DEBUG=1", NULL};
 #ifdef CONFIG_SPECIAL_EDITION
@@ -158,7 +158,7 @@ void countdown() {
             int minutes_remaining = 60 - minute;
             int hour_remaining = 23 - hour;
             printf("%02d:%02d:%02d %02d.%02d.%04d, %02d:%02d:%02d until new year\n", hour, minute, second, day, month, year, hour_remaining, minutes_remaining, seconds_remaining);
-        } if (year == 2026 and printed == false) {
+        } if ((year == 2027) and (printed == false)) {
             printf("Happy New Year!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
             printed = true;
         }
